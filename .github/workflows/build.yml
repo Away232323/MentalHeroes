@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   build:
-    name: Plugin kompilieren
+    name: Plugin und Resourcepack bauen
     runs-on: ubuntu-latest
 
     steps:
@@ -31,9 +31,20 @@ jobs:
       - name: Plugin bauen
         run: gradle clean build --no-daemon
 
-      - name: Fertiges Plugin speichern
+      - name: Resourcepack bauen
+        working-directory: resourcepack
+        run: zip -r ../MentalHeroes-Resourcepack.zip .
+
+      - name: Plugin speichern
         uses: actions/upload-artifact@v4
         with:
           name: MentalHeroes-Plugin
           path: build/libs/MentalHeroes-1.0.0.jar
+          if-no-files-found: error
+
+      - name: Resourcepack speichern
+        uses: actions/upload-artifact@v4
+        with:
+          name: MentalHeroes-Resourcepack
+          path: MentalHeroes-Resourcepack.zip
           if-no-files-found: error
