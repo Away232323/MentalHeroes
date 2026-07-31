@@ -1,0 +1,26 @@
+name: MentalHeroes
+version: 1.0.0
+main: de.away.mentalheroes.MentalHeroesPlugin
+api-version: '1.21.6'
+author: Away
+description: Ein Helden- und Combat-System für Paper 1.21.6
+
+commands:
+  mentalheroes:
+    description: Hauptcommand von MentalHeroes
+    usage: /mentalheroes <hearts|sethearts>
+    aliases:
+      - mh
+
+permissions:
+  mentalheroes.command.hearts:
+    description: Erlaubt das Anzeigen der eigenen Herzen
+    default: true
+
+  mentalheroes.command.hearts.others:
+    description: Erlaubt das Anzeigen der Herzen anderer Spieler
+    default: true
+
+  mentalheroes.command.sethearts:
+    description: Erlaubt das Setzen von Spielerherzen
+    default: op
