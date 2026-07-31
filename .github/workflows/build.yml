@@ -1,0 +1,39 @@
+name: MentalHeroes bauen
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Plugin kompilieren
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v4
+
+      - name: Java 21 einrichten
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Gradle einrichten
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14.3"
+
+      - name: Plugin bauen
+        run: gradle clean build --no-daemon
+
+      - name: Fertiges Plugin speichern
+        uses: actions/upload-artifact@v4
+        with:
+          name: MentalHeroes-Plugin
+          path: build/libs/MentalHeroes-1.0.0.jar
+          if-no-files-found: error
