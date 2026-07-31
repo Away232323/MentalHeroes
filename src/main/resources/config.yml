@@ -1,0 +1,29 @@
+combat:
+  start-seconds: 30
+  hits-per-extension: 5
+  extension-seconds: 20
+
+  # Verhindert, dass Spieler sich durch Verlassen retten
+  logout-loses-heart: true
+
+hearts:
+  maximum: 3
+  starting-hearts: 3
+
+ban:
+  reason: "<red><bold>Du hast alle deine Heldenherzen verloren!</bold></red>"
+
+messages:
+  prefix: "<dark_aqua><bold>MentalHeroes</bold></dark_aqua> <dark_gray>»</dark_gray> "
+
+  no-permission: "<red>Dafür hast du keine Berechtigung.</red>"
+  player-not-found: "<red>Dieser Spieler wurde nicht gefunden.</red>"
+  invalid-number: "<red>Die Herzen müssen zwischen 0 und 3 liegen.</red>"
+
+  own-hearts: "<gray>Du besitzt aktuell <aqua><hearts></aqua> Herzen.</gray>"
+  other-hearts: "<gray><player> besitzt aktuell <aqua><hearts></aqua> Herzen.</gray>"
+  hearts-set: "<green>Die Herzen von <player> wurden auf <hearts> gesetzt.</green>"
+  hearts-received: "<green>Deine Herzen wurden auf <hearts> gesetzt.</green>"
+
+  heart-lost: "<red>Du hast ein Heldenherz verloren! Verbleibend: <hearts></red>"
+  combat-ended: "<green>Du bist nicht mehr im Kampf.</green>"
