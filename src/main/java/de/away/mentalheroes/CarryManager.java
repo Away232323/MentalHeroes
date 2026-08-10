@@ -41,9 +41,9 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
-import org.bukkit.inventory.BlockStateMeta;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.projectiles.ProjectileSource;
@@ -1079,7 +1079,7 @@ public final class CarryManager implements Listener {
             this.origin = origin;
         }
 
-        private Location fallbackLocation() {
+        final Location fallbackLocation() {
             return origin.clone();
         }
     }
