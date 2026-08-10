@@ -129,33 +129,24 @@ public final class HeroListener implements Listener {
     public void onDeath(PlayerDeathEvent event) {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
-        boolean animatedHeartLoss =
-                heartLossAnimationManager.consumeAnimatedDeath(uuid);
 
-        if (!combatManager.isInCombat(uuid) && !animatedHeartLoss) {
+        if (!combatManager.isInCombat(uuid)) {
             return;
         }
 
         Player killer = player.getKiller();
-        UUID pendingKiller =
-                heartLossAnimationManager.consumePendingKiller(uuid);
 
-        if (pendingKiller != null) {
-            Player pendingPlayer = Bukkit.getPlayer(pendingKiller);
-
-            if (pendingPlayer != null) {
-                killer = pendingPlayer;
-            }
+        if (killer == null
+                && player.getLastDamageCause()
+                instanceof EntityDamageByEntityEvent lastDamage) {
+            killer = findResponsiblePlayer(lastDamage.getDamager());
         }
 
         if (killer != null
-                && (
-                combatManager.areOpponents(
+                && combatManager.areOpponents(
                         killer.getUniqueId(),
                         uuid
-                )
-                        || killer.getUniqueId().equals(pendingKiller)
-        )) {
+                )) {
             combatManager.clear(killer.getUniqueId());
             sendConfigured(
                     killer,
@@ -173,6 +164,7 @@ public final class HeroListener implements Listener {
         }
 
         int remainingHearts = heartManager.removeHeart(uuid);
+        heartLossAnimationManager.queueAnimation(uuid);
 
         sendConfigured(
                 player,
@@ -182,13 +174,6 @@ public final class HeroListener implements Listener {
                         String.valueOf(remainingHearts)
                 )
         );
-
-        if (remainingHearts <= 0) {
-            Bukkit.getScheduler().runTask(
-                    plugin,
-                    () -> banPlayer(player)
-            );
-        }
     }
 
     @EventHandler
@@ -197,8 +182,32 @@ public final class HeroListener implements Listener {
 
         Bukkit.getScheduler().runTaskLater(
                 plugin,
-                () -> hudManager.update(player),
-                5L
+                () -> {
+                    hudManager.update(player);
+
+                    boolean animationStarted =
+                            heartLossAnimationManager
+                                    .playPendingAnimation(
+                                            player,
+                                            () -> {
+                                                hudManager.update(player);
+
+                                                if (heartManager.getHearts(
+                                                        player.getUniqueId()
+                                                ) <= 0) {
+                                                    banPlayer(player);
+                                                }
+                                            }
+                                    );
+
+                    if (!animationStarted
+                            && heartManager.getHearts(
+                                    player.getUniqueId()
+                            ) <= 0) {
+                        banPlayer(player);
+                    }
+                },
+                10L
         );
     }
 

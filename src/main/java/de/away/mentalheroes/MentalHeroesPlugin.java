@@ -33,9 +33,7 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         );
 
         heartLossAnimationManager = new HeartLossAnimationManager(
-                this,
-                heartManager,
-                combatManager
+                this
         );
 
         backpackManager = new BackpackManager(this);
