@@ -1,9 +1,9 @@
 name: MentalHeroes
-version: 1.0.0
+version: 1.1.0
 main: de.away.mentalheroes.MentalHeroesPlugin
 api-version: '1.21.6'
 author: Away
-description: Ein Helden- und Combat-System für Paper 1.21.6
+description: Ein System mit blauen Heldenherzen und Combat für Paper 1.21.6
 
 commands:
   mentalheroes:

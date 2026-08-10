@@ -25,5 +25,5 @@ messages:
   hearts-set: "<green>Die Herzen von <player> wurden auf <hearts> gesetzt.</green>"
   hearts-received: "<green>Deine Herzen wurden auf <hearts> gesetzt.</green>"
 
-  heart-lost: "<red>Du hast ein Heldenherz verloren! Verbleibend: <hearts></red>"
+  heart-lost: "<red>Du hast ein blaues Herz verloren! Verbleibend: <hearts></red>"
   combat-ended: "<green>Du bist nicht mehr im Kampf.</green>"

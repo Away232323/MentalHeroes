@@ -23,9 +23,7 @@ import org.bukkit.projectiles.ProjectileSource;
 
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 public final class HeroListener implements Listener {
@@ -37,7 +35,6 @@ public final class HeroListener implements Listener {
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
     private final Map<UUID, UUID> crystalAttackers = new HashMap<>();
-    private final Set<UUID> directPlayerDeaths = new HashSet<>();
 
     public HeroListener(
             MentalHeroesPlugin plugin,
@@ -123,22 +120,6 @@ public final class HeroListener implements Listener {
         }
 
         combatManager.tag(attacker, victim);
-
-        /*
-         * Wir merken uns, wenn dieser Treffer den Spieler
-         * direkt töten wird. Das ist für das goldene Herz.
-         */
-        if (event.getFinalDamage() >= victim.getHealth()) {
-            directPlayerDeaths.add(victim.getUniqueId());
-
-            Bukkit.getScheduler().runTaskLater(
-                    plugin,
-                    () -> directPlayerDeaths.remove(
-                            victim.getUniqueId()
-                    ),
-                    1L
-            );
-        }
     }
 
     @EventHandler(
@@ -158,24 +139,6 @@ public final class HeroListener implements Listener {
         int currentHearts = heartManager.getHearts(uuid);
 
         if (currentHearts <= 0) {
-            return;
-        }
-
-        boolean directPlayerKill =
-                directPlayerDeaths.remove(uuid);
-
-        /*
-         * Das letzte goldene Herz geht vorläufig nur bei
-         * einem direkten finalen Spieler-Treffer verloren.
-         */
-        if (currentHearts == 1 && !directPlayerKill) {
-            sendRaw(
-                    player,
-                    "<gold>Dein goldenes Herz wurde geschützt, "
-                            + "weil der letzte Treffer nicht direkt "
-                            + "von einem Spieler kam.</gold>"
-            );
-
             return;
         }
 
@@ -332,17 +295,4 @@ public final class HeroListener implements Listener {
         );
     }
 
-    private void sendRaw(
-            Player player,
-            String message
-    ) {
-        String prefix = plugin.getConfig().getString(
-                "messages.prefix",
-                ""
-        );
-
-        player.sendMessage(
-                miniMessage.deserialize(prefix + message)
-        );
-    }
 }
