@@ -499,7 +499,6 @@ public final class BackpackManager implements Listener {
         display.setRotation(player.getLocation().getYaw(), 0.0F);
 
         player.addPassenger(display);
-        player.hideEntity(plugin, display);
 
         backpackDisplays.put(player.getUniqueId(), display);
     }
@@ -521,7 +520,6 @@ public final class BackpackManager implements Listener {
         }
 
         display.setRotation(player.getLocation().getYaw(), 0.0F);
-        player.hideEntity(plugin, display);
     }
 
     private void hideBackpack(UUID playerId) {
