@@ -3,85 +3,85 @@
     {
       "type": "bitmap",
       "file": "mentalheroes:font/heart_loss/frame_00.png",
-      "ascent": 110,
-      "height": 144,
+      "ascent": 135,
+      "height": 270,
       "chars": ["\uE100"]
     },
     {
       "type": "bitmap",
       "file": "mentalheroes:font/heart_loss/frame_01.png",
-      "ascent": 110,
-      "height": 144,
+      "ascent": 135,
+      "height": 270,
       "chars": ["\uE101"]
     },
     {
       "type": "bitmap",
       "file": "mentalheroes:font/heart_loss/frame_02.png",
-      "ascent": 110,
-      "height": 144,
+      "ascent": 135,
+      "height": 270,
       "chars": ["\uE102"]
     },
     {
       "type": "bitmap",
       "file": "mentalheroes:font/heart_loss/frame_03.png",
-      "ascent": 110,
-      "height": 144,
+      "ascent": 135,
+      "height": 270,
       "chars": ["\uE103"]
     },
     {
       "type": "bitmap",
       "file": "mentalheroes:font/heart_loss/frame_04.png",
-      "ascent": 110,
-      "height": 144,
+      "ascent": 135,
+      "height": 270,
       "chars": ["\uE104"]
     },
     {
       "type": "bitmap",
       "file": "mentalheroes:font/heart_loss/frame_05.png",
-      "ascent": 110,
-      "height": 144,
+      "ascent": 135,
+      "height": 270,
       "chars": ["\uE105"]
     },
     {
       "type": "bitmap",
       "file": "mentalheroes:font/heart_loss/frame_06.png",
-      "ascent": 110,
-      "height": 144,
+      "ascent": 135,
+      "height": 270,
       "chars": ["\uE106"]
     },
     {
       "type": "bitmap",
       "file": "mentalheroes:font/heart_loss/frame_07.png",
-      "ascent": 110,
-      "height": 144,
+      "ascent": 135,
+      "height": 270,
       "chars": ["\uE107"]
     },
     {
       "type": "bitmap",
       "file": "mentalheroes:font/heart_loss/frame_08.png",
-      "ascent": 110,
-      "height": 144,
+      "ascent": 135,
+      "height": 270,
       "chars": ["\uE108"]
     },
     {
       "type": "bitmap",
       "file": "mentalheroes:font/heart_loss/frame_09.png",
-      "ascent": 110,
-      "height": 144,
+      "ascent": 135,
+      "height": 270,
       "chars": ["\uE109"]
     },
     {
       "type": "bitmap",
       "file": "mentalheroes:font/heart_loss/frame_10.png",
-      "ascent": 110,
-      "height": 144,
+      "ascent": 135,
+      "height": 270,
       "chars": ["\uE10A"]
     },
     {
       "type": "bitmap",
       "file": "mentalheroes:font/heart_loss/frame_11.png",
-      "ascent": 110,
-      "height": 144,
+      "ascent": 135,
+      "height": 270,
       "chars": ["\uE10B"]
     }
   ]

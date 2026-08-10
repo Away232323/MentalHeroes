@@ -12,6 +12,7 @@ public final class MentalHeroesPlugin extends JavaPlugin {
     private HudManager hudManager;
     private GrapplingHookManager grapplingHookManager;
     private HeartLossAnimationManager heartLossAnimationManager;
+    private BackpackManager backpackManager;
 
     @Override
     public void onEnable() {
@@ -37,6 +38,9 @@ public final class MentalHeroesPlugin extends JavaPlugin {
                 combatManager
         );
 
+        backpackManager = new BackpackManager(this);
+        backpackManager.registerRecipe();
+
         DisabledMobListener disabledMobListener =
                 new DisabledMobListener();
 
@@ -59,6 +63,10 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 grapplingHookManager,
+                this
+        );
+        getServer().getPluginManager().registerEvents(
+                backpackManager,
                 this
         );
         getServer().getPluginManager().registerEvents(
@@ -89,6 +97,7 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         combatManager.start();
         hudManager.start();
         grapplingHookManager.start();
+        backpackManager.start();
         disabledMobListener.removeExistingMobs();
 
         getLogger().info("MentalHeroes has been enabled successfully!");
@@ -110,6 +119,10 @@ public final class MentalHeroesPlugin extends JavaPlugin {
 
         if (heartLossAnimationManager != null) {
             heartLossAnimationManager.stop();
+        }
+
+        if (backpackManager != null) {
+            backpackManager.stop();
         }
 
         if (heartManager != null) {

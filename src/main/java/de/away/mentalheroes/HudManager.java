@@ -1,27 +1,25 @@
 package de.away.mentalheroes;
 
-import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 
 public final class HudManager {
 
     private static final Key HEART_FONT =
             Key.key("mentalheroes", "hearts");
+    private static final Key SPACING_FONT =
+            Key.key("mentalheroes", "hud_spacing");
+
+    private static final int HEART_DISPLAY_WIDTH = 25;
 
     private final MentalHeroesPlugin plugin;
     private final HeartManager heartManager;
     private final CombatManager combatManager;
-    private final MiniMessage miniMessage = MiniMessage.miniMessage();
-    private final Map<UUID, BossBar> combatBars = new HashMap<>();
 
     private BukkitTask hudTask;
 
@@ -54,26 +52,14 @@ public final class HudManager {
             hudTask = null;
         }
 
-        for (Map.Entry<UUID, BossBar> entry : combatBars.entrySet()) {
-            Player player = Bukkit.getPlayer(entry.getKey());
-
-            if (player != null) {
-                player.hideBossBar(entry.getValue());
-            }
-        }
-
-        combatBars.clear();
     }
 
     public void update(Player player) {
         int hearts = heartManager.getHearts(player.getUniqueId());
         Component heartDisplay = createHeartDisplay(hearts);
 
-        // Hearts always stay in their own centered action bar.
-        player.sendActionBar(heartDisplay);
-
         if (!combatManager.isInCombat(player.getUniqueId())) {
-            hideCombatBar(player);
+            player.sendActionBar(heartDisplay);
             return;
         }
 
@@ -81,47 +67,92 @@ public final class HudManager {
                 player.getUniqueId()
         );
 
-        Component combatDisplay = miniMessage.deserialize(
-                "<red><bold>IN COMBAT</bold></red> "
-                        + "<gray>• <white>"
-                        + seconds
-                        + "s REMAINING</white></gray>"
-        );
+        String combatPrefix = "IN COMBAT!";
+        String combatSuffix = " (" + seconds + "s REMAINING)";
 
-        int maximumSeconds = Math.max(
-                1,
-                plugin.getConfig().getInt(
-                        "combat.maximum-seconds",
-                        150
+        Component combatDisplay = Component.text(
+                        combatPrefix,
+                        NamedTextColor.RED
                 )
-        );
+                .decorate(TextDecoration.BOLD)
+                .append(
+                        Component.text(
+                                combatSuffix,
+                                NamedTextColor.GRAY
+                        ).decoration(TextDecoration.BOLD, false)
+                );
 
-        float progress = Math.max(
-                0.0F,
-                Math.min(1.0F, (float) seconds / maximumSeconds)
-        );
+        int combatWidth = textWidth(combatPrefix, true)
+                + textWidth(combatSuffix, false);
 
-        BossBar combatBar = combatBars.computeIfAbsent(
-                player.getUniqueId(),
-                ignored -> BossBar.bossBar(
-                        combatDisplay,
-                        progress,
-                        BossBar.Color.RED,
-                        BossBar.Overlay.PROGRESS
-                )
+        int beforeCombat = Math.floorDiv(
+                HEART_DISPLAY_WIDTH - combatWidth,
+                2
         );
+        int afterCombat = -beforeCombat - combatWidth;
 
-        combatBar.name(combatDisplay);
-        combatBar.progress(progress);
-        player.showBossBar(combatBar);
+        Component fixedHud = Component.empty()
+                .append(spacing(beforeCombat))
+                .append(combatDisplay)
+                .append(spacing(afterCombat))
+                .append(heartDisplay);
+
+        player.sendActionBar(fixedHud);
     }
 
     public void hideCombatBar(Player player) {
-        BossBar combatBar = combatBars.remove(player.getUniqueId());
+        // Kept for listeners that clear HUD state when a player quits.
+    }
 
-        if (combatBar != null) {
-            player.hideBossBar(combatBar);
+    private Component spacing(int pixels) {
+        if (pixels == 0) {
+            return Component.empty();
         }
+
+        boolean negative = pixels < 0;
+        int remaining = Math.abs(pixels);
+        StringBuilder characters = new StringBuilder();
+
+        for (int bit = 8; bit >= 0; bit--) {
+            int value = 1 << bit;
+
+            if (remaining < value) {
+                continue;
+            }
+
+            char character = (char) (
+                    (negative ? 0xE200 : 0xE210) + bit
+            );
+
+            characters.append(character);
+            remaining -= value;
+        }
+
+        return Component.text(characters.toString()).font(SPACING_FONT);
+    }
+
+    private int textWidth(String text, boolean bold) {
+        int width = 0;
+
+        for (char character : text.toCharArray()) {
+            width += characterWidth(character);
+
+            if (bold && character != ' ') {
+                width++;
+            }
+        }
+
+        return width;
+    }
+
+    private int characterWidth(char character) {
+        return switch (character) {
+            case ' ' -> 4;
+            case '!', 'i', '.', ',', ':', ';', '|' -> 2;
+            case 'I' -> 4;
+            case '(', ')' -> 5;
+            default -> 6;
+        };
     }
 
     private Component createHeartDisplay(int hearts) {
