@@ -3,6 +3,7 @@ package de.away.mentalheroes;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.enchantments.EnchantmentOffer;
 import org.bukkit.entity.Entity;
@@ -104,6 +105,8 @@ public final class RestrictedEnchantmentManager implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onLootGenerate(LootGenerateEvent event) {
+        event.getLoot().removeIf(this::shouldRemoveItem);
+
         for (ItemStack item : event.getLoot()) {
             sanitizeItem(item);
         }
@@ -137,6 +140,11 @@ public final class RestrictedEnchantmentManager implements Listener {
     public void onPrepareAnvil(PrepareAnvilEvent event) {
         ItemStack result = event.getResult();
 
+        if (shouldRemoveItem(result)) {
+            event.setResult(null);
+            return;
+        }
+
         if (sanitizeItem(result)) {
             event.setResult(result);
         }
@@ -146,6 +154,11 @@ public final class RestrictedEnchantmentManager implements Listener {
     public void onPrepareSmithing(PrepareSmithingEvent event) {
         ItemStack result = event.getResult();
 
+        if (shouldRemoveItem(result)) {
+            event.setResult(null);
+            return;
+        }
+
         if (sanitizeItem(result)) {
             event.setResult(result);
         }
@@ -153,23 +166,41 @@ public final class RestrictedEnchantmentManager implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onItemPickup(EntityPickupItemEvent event) {
+        if (shouldRemoveItem(event.getItem().getItemStack())) {
+            event.setCancelled(true);
+            event.getItem().remove();
+            return;
+        }
+
         sanitizeItem(event.getItem().getItemStack());
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onItemDrop(PlayerDropItemEvent event) {
+        if (shouldRemoveItem(event.getItemDrop().getItemStack())) {
+            event.getItemDrop().remove();
+            return;
+        }
+
         sanitizeItem(event.getItemDrop().getItemStack());
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onFishing(PlayerFishEvent event) {
         if (event.getCaught() instanceof Item item) {
+            if (shouldRemoveItem(item.getItemStack())) {
+                item.remove();
+                return;
+            }
+
             sanitizeItem(item.getItemStack());
         }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onEntityDeath(EntityDeathEvent event) {
+        event.getDrops().removeIf(this::shouldRemoveItem);
+
         for (ItemStack item : event.getDrops()) {
             sanitizeItem(item);
         }
@@ -187,6 +218,11 @@ public final class RestrictedEnchantmentManager implements Listener {
     public void onChunkLoad(ChunkLoadEvent event) {
         for (Entity entity : event.getChunk().getEntities()) {
             if (entity instanceof Item item) {
+                if (shouldRemoveItem(item.getItemStack())) {
+                    item.remove();
+                    continue;
+                }
+
                 sanitizeItem(item.getItemStack());
             } else if (entity instanceof LivingEntity livingEntity
                     && !(livingEntity instanceof Player)) {
@@ -226,7 +262,14 @@ public final class RestrictedEnchantmentManager implements Listener {
     }
 
     private void sanitizeInventory(Inventory inventory) {
-        for (ItemStack item : inventory.getContents()) {
+        for (int slot = 0; slot < inventory.getSize(); slot++) {
+            ItemStack item = inventory.getItem(slot);
+
+            if (shouldRemoveItem(item)) {
+                inventory.setItem(slot, null);
+                continue;
+            }
+
             sanitizeItem(item);
         }
     }
@@ -238,18 +281,52 @@ public final class RestrictedEnchantmentManager implements Listener {
 
         ItemStack[] armor = equipment.getArmorContents();
 
-        for (ItemStack item : armor) {
-            sanitizeItem(item);
+        for (int slot = 0; slot < armor.length; slot++) {
+            if (shouldRemoveItem(armor[slot])) {
+                armor[slot] = null;
+            } else {
+                sanitizeItem(armor[slot]);
+            }
         }
 
         equipment.setArmorContents(armor);
 
         ItemStack mainHand = equipment.getItemInMainHand();
         ItemStack offHand = equipment.getItemInOffHand();
-        sanitizeItem(mainHand);
-        sanitizeItem(offHand);
+
+        if (shouldRemoveItem(mainHand)) {
+            mainHand = null;
+        } else {
+            sanitizeItem(mainHand);
+        }
+
+        if (shouldRemoveItem(offHand)) {
+            offHand = null;
+        } else {
+            sanitizeItem(offHand);
+        }
+
         equipment.setItemInMainHand(mainHand);
         equipment.setItemInOffHand(offHand);
+    }
+
+    private boolean shouldRemoveItem(ItemStack item) {
+        if (item == null || item.getType().isAir()) {
+            return false;
+        }
+
+        if (item.getType() == Material.ENCHANTED_GOLDEN_APPLE) {
+            return true;
+        }
+
+        if (item.getType() != Material.ENCHANTED_BOOK
+                || !(item.getItemMeta()
+                instanceof EnchantmentStorageMeta storageMeta)) {
+            return false;
+        }
+
+        return BLOCKED_ENCHANTMENTS.stream()
+                .anyMatch(storageMeta::hasStoredEnchant);
     }
 
     private boolean sanitizeItem(ItemStack item) {
