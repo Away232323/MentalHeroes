@@ -3,6 +3,7 @@ package de.away.mentalheroes;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
@@ -283,6 +284,23 @@ public final class PlaytimeManager
         );
     }
 
+    public void setRemainingSeconds(UUID uuid, int remainingSeconds) {
+        int clampedRemaining = Math.max(
+                0,
+                Math.min(dailySeconds, remainingSeconds)
+        );
+
+        usedSeconds.put(uuid, dailySeconds - clampedRemaining);
+        dirty = true;
+        saveData();
+
+        Player player = Bukkit.getPlayer(uuid);
+
+        if (player != null && player.isOnline()) {
+            handleOnlinePlayer(player);
+        }
+    }
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -435,10 +453,15 @@ public final class PlaytimeManager
             return true;
         }
 
+        if (subCommand.equals("set")) {
+            handleSetTime(sender, label, args);
+            return true;
+        }
+
         sender.sendMessage(Component.text(
                 "Usage: /"
                         + label
-                        + " <show|hide|enable|disable|status>",
+                        + " <show|hide|enable|disable|set|status>",
                 NamedTextColor.RED
         ));
         return true;
@@ -503,6 +526,135 @@ public final class PlaytimeManager
         ));
     }
 
+    private void handleSetTime(
+            CommandSender sender,
+            String label,
+            String[] args
+    ) {
+        if (!sender.hasPermission(ADMIN_PERMISSION)) {
+            sender.sendMessage(Component.text(
+                    "You do not have permission to do that.",
+                    NamedTextColor.RED
+            ));
+            return;
+        }
+
+        if (args.length != 3) {
+            sender.sendMessage(Component.text(
+                    "Usage: /"
+                            + label
+                            + " set <player> <time>",
+                    NamedTextColor.RED
+            ));
+            sender.sendMessage(Component.text(
+                    "Examples: 30s, 15m, 1h. Numbers without a suffix are minutes.",
+                    NamedTextColor.GRAY
+            ));
+            return;
+        }
+
+        OfflinePlayer target = findPlayer(args[1]);
+
+        if (target == null) {
+            sender.sendMessage(Component.text(
+                    "That player could not be found.",
+                    NamedTextColor.RED
+            ));
+            return;
+        }
+
+        Integer requestedSeconds = parseTime(args[2]);
+
+        if (requestedSeconds == null
+                || requestedSeconds < 0
+                || requestedSeconds > dailySeconds) {
+            sender.sendMessage(Component.text(
+                    "Invalid time. Use a value between 0s and 1h.",
+                    NamedTextColor.RED
+            ));
+            return;
+        }
+
+        setRemainingSeconds(
+                target.getUniqueId(),
+                requestedSeconds
+        );
+
+        String targetName = target.getName() == null
+                ? args[1]
+                : target.getName();
+
+        sender.sendMessage(Component.text(
+                "Set "
+                        + targetName
+                        + "'s remaining playtime to "
+                        + formatTime(requestedSeconds)
+                        + ".",
+                NamedTextColor.GREEN
+        ));
+
+        Player onlineTarget = target.getPlayer();
+
+        if (onlineTarget != null
+                && onlineTarget.isOnline()
+                && requestedSeconds > 0) {
+            onlineTarget.sendMessage(Component.text(
+                    "Your remaining playtime was set to "
+                            + formatTime(requestedSeconds)
+                            + ".",
+                    NamedTextColor.GREEN
+            ));
+        }
+    }
+
+    private OfflinePlayer findPlayer(String name) {
+        Player onlinePlayer = Bukkit.getPlayerExact(name);
+
+        if (onlinePlayer != null) {
+            return onlinePlayer;
+        }
+
+        return Bukkit.getOfflinePlayerIfCached(name);
+    }
+
+    private Integer parseTime(String input) {
+        String normalized = input.toLowerCase(Locale.ROOT).trim();
+        int multiplier = 60;
+
+        if (normalized.endsWith("s")) {
+            multiplier = 1;
+            normalized = normalized.substring(
+                    0,
+                    normalized.length() - 1
+            );
+        } else if (normalized.endsWith("m")) {
+            multiplier = 60;
+            normalized = normalized.substring(
+                    0,
+                    normalized.length() - 1
+            );
+        } else if (normalized.endsWith("h")) {
+            multiplier = 3600;
+            normalized = normalized.substring(
+                    0,
+                    normalized.length() - 1
+            );
+        }
+
+        try {
+            long amount = Long.parseLong(normalized);
+            long seconds = Math.multiplyExact(amount, multiplier);
+
+            if (seconds < 0 || seconds > Integer.MAX_VALUE) {
+                return null;
+            }
+
+            return (int) seconds;
+        } catch (NumberFormatException | ArithmeticException exception) {
+            return null;
+        }
+    }
+
     private void sendStatus(CommandSender sender) {
         if (!enabled) {
             sender.sendMessage(Component.text(
@@ -535,6 +687,28 @@ public final class PlaytimeManager
             String alias,
             String[] args
     ) {
+        if (args.length == 2
+                && args[0].equalsIgnoreCase("set")
+                && sender.hasPermission(ADMIN_PERMISSION)) {
+            String prefix = args[1].toLowerCase(Locale.ROOT);
+            return Bukkit.getOnlinePlayers().stream()
+                    .map(Player::getName)
+                    .filter(name -> name.toLowerCase(Locale.ROOT)
+                            .startsWith(prefix))
+                    .sorted(String.CASE_INSENSITIVE_ORDER)
+                    .toList();
+        }
+
+        if (args.length == 3
+                && args[0].equalsIgnoreCase("set")
+                && sender.hasPermission(ADMIN_PERMISSION)) {
+            String prefix = args[2].toLowerCase(Locale.ROOT);
+            return List.of("30s", "15m", "30m", "1h")
+                    .stream()
+                    .filter(option -> option.startsWith(prefix))
+                    .toList();
+        }
+
         if (args.length != 1) {
             return List.of();
         }
@@ -550,6 +724,7 @@ public final class PlaytimeManager
         if (sender.hasPermission(ADMIN_PERMISSION)) {
             options.add("enable");
             options.add("disable");
+            options.add("set");
         }
 
         String prefix = args[0].toLowerCase(Locale.ROOT);

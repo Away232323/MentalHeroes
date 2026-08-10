@@ -1,5 +1,5 @@
 name: MentalHeroes
-version: 1.4.0
+version: 1.4.1
 main: de.away.mentalheroes.MentalHeroesPlugin
 api-version: '1.21.6'
 author: Away
@@ -18,7 +18,7 @@ commands:
 
   playtime:
     description: Controls the daily playtime limit and boss bar
-    usage: /playtime <show|hide|enable|disable|status>
+    usage: /playtime <show|hide|enable|disable|set|status>
 
 permissions:
   mentalheroes.command.hearts:
