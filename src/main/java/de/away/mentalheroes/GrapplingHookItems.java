@@ -185,6 +185,21 @@ public final class GrapplingHookItems {
         return item;
     }
 
+    public ItemStack createChainLink(GrapplingHookTier tier) {
+        ItemStack item = new ItemStack(Material.PAPER);
+        ItemMeta meta = item.getItemMeta();
+
+        meta.setItemModel(
+                new NamespacedKey(
+                        plugin,
+                        tier.id() + "_grappling_chain"
+                )
+        );
+
+        item.setItemMeta(meta);
+        return item;
+    }
+
     private Component loreLine(String text) {
         return Component.text(text, NamedTextColor.GRAY)
                 .decoration(TextDecoration.ITALIC, false);

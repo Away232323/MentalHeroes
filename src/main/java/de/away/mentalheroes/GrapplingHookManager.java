@@ -2,12 +2,12 @@ package de.away.mentalheroes;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.Particle;
 import org.bukkit.Sound;
-import org.bukkit.World;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemDisplay;
@@ -29,14 +29,21 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 public final class GrapplingHookManager implements Listener {
+
+    private static final double MAX_REACH = 15.0D;
+    private static final double CHAIN_LINK_SPACING = 0.72D;
+    private static final float CHAIN_LINK_SCALE = 0.62F;
 
     private final MentalHeroesPlugin plugin;
     private final GrapplingHookItems items;
@@ -81,7 +88,7 @@ public final class GrapplingHookManager implements Listener {
 
     @EventHandler(
             priority = EventPriority.HIGH,
-            ignoreCancelled = true
+            ignoreCancelled = false
     )
     public void onUse(PlayerInteractEvent event) {
         Action action = event.getAction();
@@ -109,6 +116,19 @@ public final class GrapplingHookManager implements Listener {
         }
 
         event.setCancelled(true);
+
+        if (sessions.containsKey(player.getUniqueId())) {
+            detach(player.getUniqueId());
+            player.setFallDistance(0.0F);
+            player.getWorld().playSound(
+                    player.getLocation(),
+                    Sound.ENTITY_FISHING_BOBBER_RETRIEVE,
+                    0.8F,
+                    1.15F
+            );
+            return;
+        }
+
         shoot(player, hand, tier);
     }
 
@@ -147,7 +167,8 @@ public final class GrapplingHookManager implements Listener {
         HookSession session = new HookSession(
                 tier,
                 projectile,
-                hand
+                hand,
+                player.getEyeLocation()
         );
 
         sessions.put(player.getUniqueId(), session);
@@ -191,6 +212,12 @@ public final class GrapplingHookManager implements Listener {
                 || !session.projectile.getUniqueId().equals(
                         projectile.getUniqueId()
                 )) {
+            projectile.remove();
+            return;
+        }
+
+        if (event.getHitBlock() == null) {
+            detach(owner);
             projectile.remove();
             return;
         }
@@ -312,13 +339,13 @@ public final class GrapplingHookManager implements Listener {
                 continue;
             }
 
-            double maxDistance = plugin.getConfig().getDouble(
-                    "grappling-hook.max-distance",
-                    50.0D
-            );
+            double maxDistanceSquared = MAX_REACH * MAX_REACH;
 
             if (player.getLocation().distanceSquared(endpoint)
-                    > maxDistance * maxDistance
+                    > maxDistanceSquared
+                    || (!session.attached
+                    && session.launchOrigin.distanceSquared(endpoint)
+                    > maxDistanceSquared)
                     || session.ageTicks
                     > plugin.getConfig().getInt(
                             "grappling-hook.max-lifetime-ticks",
@@ -334,9 +361,7 @@ public final class GrapplingHookManager implements Listener {
                 session.anchorDisplay.teleport(endpoint);
             }
 
-            if ((session.ageTicks & 1) == 0) {
-                drawChain(player, endpoint, session.tier);
-            }
+            updateChain(player, endpoint, session);
 
             if (!session.attached
                     || session.pullingTicks <= 0) {
@@ -386,56 +411,131 @@ public final class GrapplingHookManager implements Listener {
         player.setVelocity(velocity);
     }
 
-    private void drawChain(
+    private void updateChain(
             Player player,
             Location endpoint,
-            GrapplingHookTier tier
+            HookSession session
     ) {
-        Location start = player.getEyeLocation()
-                .add(
-                        player.getEyeLocation()
-                                .getDirection()
-                                .multiply(0.35D)
-                );
+        Location start = getChainStart(player, session.hand);
         Vector line = endpoint.toVector()
                 .subtract(start.toVector());
         double length = line.length();
 
         if (length <= 0.05D) {
+            clearChainDisplays(session);
             return;
         }
 
-        Vector step = line.normalize().multiply(0.38D);
-        int particles = Math.min(
-                140,
-                (int) Math.ceil(length / 0.38D)
-        );
-        Location point = start.clone();
-
-        Particle.DustOptions bright = new Particle.DustOptions(
-                tier.particleColor(),
-                0.8F
-        );
-        Particle.DustOptions dark = new Particle.DustOptions(
-                org.bukkit.Color.fromRGB(42, 47, 58),
-                0.65F
+        Vector direction = line.clone().normalize();
+        int linkCount = Math.min(
+                28,
+                Math.max(
+                        1,
+                        (int) Math.ceil(
+                                length / CHAIN_LINK_SPACING
+                        )
+                )
         );
 
-        World world = player.getWorld();
-
-        for (int index = 0; index <= particles; index++) {
-            world.spawnParticle(
-                    Particle.DUST,
-                    point,
-                    1,
-                    0.0D,
-                    0.0D,
-                    0.0D,
-                    0.0D,
-                    (index & 1) == 0 ? bright : dark
+        while (session.chainDisplays.size() < linkCount) {
+            ItemDisplay display = player.getWorld().spawn(
+                    start,
+                    ItemDisplay.class
             );
-            point.add(step);
+
+            display.setItemStack(
+                    items.createChainLink(session.tier)
+            );
+            display.setItemDisplayTransform(
+                    ItemDisplay.ItemDisplayTransform.FIXED
+            );
+            display.setBillboard(Display.Billboard.FIXED);
+            display.setPersistent(false);
+            display.setInvulnerable(true);
+            display.setInterpolationDuration(1);
+            display.setTeleportDuration(1);
+            display.setViewRange(0.75F);
+            display.setShadowRadius(0.0F);
+            session.chainDisplays.add(display);
         }
+
+        while (session.chainDisplays.size() > linkCount) {
+            int lastIndex = session.chainDisplays.size() - 1;
+            ItemDisplay display = session.chainDisplays.remove(
+                    lastIndex
+            );
+            display.remove();
+        }
+
+        Vector3f chainDirection = new Vector3f(
+                (float) direction.getX(),
+                (float) direction.getY(),
+                (float) direction.getZ()
+        );
+
+        for (int index = 0; index < linkCount; index++) {
+            double progress = (index + 0.5D) / linkCount;
+            Location position = start.clone().add(
+                    line.clone().multiply(progress)
+            );
+
+            Quaternionf rotation = new Quaternionf().rotationTo(
+                    new Vector3f(0.0F, 1.0F, 0.0F),
+                    chainDirection
+            );
+
+            if ((index & 1) == 1) {
+                rotation.rotateLocalY((float) (Math.PI / 2.0D));
+            }
+
+            ItemDisplay display = session.chainDisplays.get(index);
+            display.setTransformation(
+                    new Transformation(
+                            new Vector3f(),
+                            rotation,
+                            new Vector3f(
+                                    CHAIN_LINK_SCALE,
+                                    CHAIN_LINK_SCALE,
+                                    CHAIN_LINK_SCALE
+                            ),
+                            new Quaternionf()
+                    )
+            );
+            display.teleport(position);
+        }
+    }
+
+    private Location getChainStart(
+            Player player,
+            EquipmentSlot hand
+    ) {
+        Location eye = player.getEyeLocation();
+        Vector forward = eye.getDirection().normalize();
+        Vector right = forward.clone().crossProduct(
+                new Vector(0.0D, 1.0D, 0.0D)
+        );
+
+        if (right.lengthSquared() > 0.0001D) {
+            right.normalize().multiply(
+                    hand == EquipmentSlot.OFF_HAND
+                            ? -0.32D
+                            : 0.32D
+            );
+        }
+
+        return eye.add(forward.multiply(0.78D))
+                .add(right)
+                .add(0.0D, -0.28D, 0.0D);
+    }
+
+    private void clearChainDisplays(HookSession session) {
+        for (ItemDisplay display : session.chainDisplays) {
+            if (display.isValid()) {
+                display.remove();
+            }
+        }
+
+        session.chainDisplays.clear();
     }
 
     private Location getEndpoint(HookSession session) {
@@ -530,12 +630,17 @@ public final class GrapplingHookManager implements Listener {
                 && session.anchorDisplay.isValid()) {
             session.anchorDisplay.remove();
         }
+
+        clearChainDisplays(session);
     }
 
     private static final class HookSession {
 
         private final GrapplingHookTier tier;
         private final EquipmentSlot hand;
+        private final Location launchOrigin;
+        private final List<ItemDisplay> chainDisplays =
+                new ArrayList<>();
         private Projectile projectile;
         private Location anchor;
         private UUID targetEntity;
@@ -547,11 +652,13 @@ public final class GrapplingHookManager implements Listener {
         private HookSession(
                 GrapplingHookTier tier,
                 Projectile projectile,
-                EquipmentSlot hand
+                EquipmentSlot hand,
+                Location launchOrigin
         ) {
             this.tier = tier;
             this.projectile = projectile;
             this.hand = hand;
+            this.launchOrigin = launchOrigin;
         }
     }
 }

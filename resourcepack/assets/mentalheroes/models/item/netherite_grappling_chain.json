@@ -1,0 +1,4 @@
+{
+  "parent": "mentalheroes:item/grappling_chain_link",
+  "textures": { "metal": "mentalheroes:item/netherite_grappling_chain" }
+}
