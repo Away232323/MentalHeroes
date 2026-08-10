@@ -1,8 +1,11 @@
 {
   "pack": {
     "pack_format": 63,
+    "supported_formats": [63, 64],
+    "min_format": 63,
+    "max_format": 75,
     "description": {
-      "text": "MentalHeroes - 3 blaue Herzen für Minecraft 1.21.6",
+      "text": "MentalHeroes - 3 blaue Herzen (1.21.6 - 1.21.11)",
       "color": "aqua"
     }
   }
