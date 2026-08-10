@@ -41,7 +41,7 @@ import java.util.UUID;
 
 public final class GrapplingHookManager implements Listener {
 
-    private static final double MAX_REACH = 15.0D;
+    private static final double MAX_REACH = 25.0D;
     private static final double CHAIN_LINK_SPACING = 0.72D;
     private static final float CHAIN_LINK_SCALE = 0.62F;
 
