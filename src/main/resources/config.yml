@@ -11,8 +11,8 @@ hearts:
   starting-hearts: 3
 
 grappling-hook:
-  # Der Haken fliegt und reicht maximal 15 Bloecke weit
-  max-distance: 15.0
+  # Der Haken fliegt und reicht maximal 25 Bloecke weit
+  max-distance: 25.0
   max-lifetime-ticks: 1200
 
   # Flug- und Zuggeschwindigkeit
