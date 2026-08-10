@@ -2,6 +2,7 @@ combat:
   start-seconds: 30
   hits-per-extension: 5
   extension-seconds: 20
+  maximum-seconds: 150
 
   # Verhindert, dass Spieler sich durch Verlassen retten
   logout-loses-heart: true
