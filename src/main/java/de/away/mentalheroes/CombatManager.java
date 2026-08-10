@@ -7,8 +7,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public final class CombatManager {
@@ -42,20 +44,24 @@ public final class CombatManager {
     }
 
     public void tag(Player firstPlayer, Player secondPlayer) {
-        if (firstPlayer.getUniqueId().equals(secondPlayer.getUniqueId())) {
+        UUID firstUuid = firstPlayer.getUniqueId();
+        UUID secondUuid = secondPlayer.getUniqueId();
+
+        if (firstUuid.equals(secondUuid)) {
             return;
         }
 
-        tagPlayer(firstPlayer.getUniqueId());
-        tagPlayer(secondPlayer.getUniqueId());
+        tagPlayer(firstUuid, secondUuid);
+        tagPlayer(secondUuid, firstUuid);
     }
 
-    private void tagPlayer(UUID uuid) {
+    private void tagPlayer(UUID uuid, UUID opponentUuid) {
         CombatState state = combatPlayers.computeIfAbsent(
                 uuid,
                 ignored -> new CombatState()
         );
 
+        state.opponents.add(opponentUuid);
         state.hitCount++;
         state.remainingSeconds = calculateDuration(state.hitCount);
     }
@@ -79,9 +85,20 @@ public final class CombatManager {
                 20
         );
 
+        int maximumSeconds = Math.max(
+                1,
+                plugin.getConfig().getInt(
+                        "combat.maximum-seconds",
+                        150
+                )
+        );
+
         int extensions = (hitCount - 1) / hitsPerExtension;
 
-        return startSeconds + (extensions * extensionSeconds);
+        return Math.min(
+                maximumSeconds,
+                startSeconds + (extensions * extensionSeconds)
+        );
     }
 
     private void tick() {
@@ -99,6 +116,7 @@ public final class CombatManager {
             }
 
             iterator.remove();
+            removeOpponentReferences(entry.getKey());
 
             Player player = Bukkit.getPlayer(entry.getKey());
 
@@ -146,13 +164,32 @@ public final class CombatManager {
         return state.hitCount;
     }
 
+    public boolean areOpponents(UUID firstUuid, UUID secondUuid) {
+        CombatState firstState = combatPlayers.get(firstUuid);
+        CombatState secondState = combatPlayers.get(secondUuid);
+
+        return firstState != null
+                && secondState != null
+                && firstState.opponents.contains(secondUuid)
+                && secondState.opponents.contains(firstUuid);
+    }
+
     public void clear(UUID uuid) {
-        combatPlayers.remove(uuid);
+        if (combatPlayers.remove(uuid) != null) {
+            removeOpponentReferences(uuid);
+        }
+    }
+
+    private void removeOpponentReferences(UUID uuid) {
+        for (CombatState state : combatPlayers.values()) {
+            state.opponents.remove(uuid);
+        }
     }
 
     private static final class CombatState {
 
         private int remainingSeconds;
         private int hitCount;
+        private final Set<UUID> opponents = new HashSet<>();
     }
 }
