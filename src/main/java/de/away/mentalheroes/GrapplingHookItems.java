@@ -61,11 +61,11 @@ public final class GrapplingHookItems {
         ShapedRecipe recipe = new ShapedRecipe(key, createHead(tier));
         recipe.shape(
                 ".MM",
-                ".SM",
+                ".NM",
                 "..."
         );
         recipe.setIngredient('M', tier.ingredient());
-        recipe.setIngredient('S', Material.STRING);
+        recipe.setIngredient('N', Material.IRON_NUGGET);
 
         plugin.getServer().addRecipe(recipe);
         headRecipeKeys.put(tier, key);
