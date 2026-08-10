@@ -146,7 +146,8 @@ public final class GrapplingHookManager implements Listener {
 
         HookSession session = new HookSession(
                 tier,
-                projectile
+                projectile,
+                hand
         );
 
         sessions.put(player.getUniqueId(), session);
@@ -295,6 +296,12 @@ public final class GrapplingHookManager implements Listener {
                 continue;
             }
 
+            if (!isHoldingSessionHook(player, session)) {
+                removeEntities(session);
+                iterator.remove();
+                continue;
+            }
+
             session.ageTicks++;
             Location endpoint = getEndpoint(session);
 
@@ -339,6 +346,18 @@ public final class GrapplingHookManager implements Listener {
             pullPlayer(player, endpoint);
             session.pullingTicks--;
         }
+    }
+
+    private boolean isHoldingSessionHook(
+            Player player,
+            HookSession session
+    ) {
+        ItemStack heldItem = session.hand == EquipmentSlot.OFF_HAND
+                ? player.getInventory().getItemInOffHand()
+                : player.getInventory().getItemInMainHand();
+
+        return items.isHook(heldItem)
+                && items.getTier(heldItem) == session.tier;
     }
 
     private void pullPlayer(Player player, Location endpoint) {
@@ -516,6 +535,7 @@ public final class GrapplingHookManager implements Listener {
     private static final class HookSession {
 
         private final GrapplingHookTier tier;
+        private final EquipmentSlot hand;
         private Projectile projectile;
         private Location anchor;
         private UUID targetEntity;
@@ -526,10 +546,12 @@ public final class GrapplingHookManager implements Listener {
 
         private HookSession(
                 GrapplingHookTier tier,
-                Projectile projectile
+                Projectile projectile,
+                EquipmentSlot hand
         ) {
             this.tier = tier;
             this.projectile = projectile;
+            this.hand = hand;
         }
     }
 }
