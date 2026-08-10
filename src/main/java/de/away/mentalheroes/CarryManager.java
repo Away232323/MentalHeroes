@@ -178,7 +178,7 @@ public final class CarryManager implements Listener {
         }
 
         if (!player.isSneaking()
-                || !isMainHandEmpty(player)
+                || !areHandsEmpty(player)
                 || player.getGameMode() == GameMode.SPECTATOR
                 || !canCarryMob(event.getRightClicked())) {
             return;
@@ -221,7 +221,7 @@ public final class CarryManager implements Listener {
         if (clicked == null
                 || clicked.getType() != Material.SPAWNER
                 || !player.isSneaking()
-                || !isMainHandEmpty(player)
+                || !areHandsEmpty(player)
                 || player.getGameMode() == GameMode.SPECTATOR) {
             return;
         }
@@ -763,8 +763,10 @@ public final class CarryManager implements Listener {
         player.setWalkSpeed(session.originalWalkSpeed);
     }
 
-    private boolean isMainHandEmpty(Player player) {
+    private boolean areHandsEmpty(Player player) {
         return player.getInventory().getItemInMainHand()
+                .getType().isAir()
+                && player.getInventory().getItemInOffHand()
                 .getType().isAir();
     }
 
