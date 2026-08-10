@@ -1,19 +1,13 @@
 package de.away.mentalheroes;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.Keyed;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.enchantment.EnchantItemEvent;
-import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
-import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.inventory.PrepareSmithingEvent;
 import org.bukkit.event.player.PlayerItemMendEvent;
-import org.bukkit.inventory.CraftingInventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.SmithingInventory;
 import org.bukkit.inventory.meta.Damageable;
@@ -30,127 +24,6 @@ public final class GrapplingHookCraftingListener
             GrapplingHookItems items
     ) {
         this.items = items;
-    }
-
-    @EventHandler
-    public void onPrepareCraft(PrepareItemCraftEvent event) {
-        if (!(event.getRecipe() instanceof Keyed keyed)) {
-            return;
-        }
-
-        CraftingInventory inventory = event.getInventory();
-        ItemStack[] matrix = inventory.getMatrix();
-
-        GrapplingHookTier headTier =
-                items.getHeadRecipeTier(keyed.getKey());
-
-        if (headTier != null) {
-            if (!hasAmount(matrix, 4, Material.STRING, 2)) {
-                inventory.setResult(null);
-            }
-            return;
-        }
-
-        GrapplingHookTier hookTier =
-                items.getHookRecipeTier(keyed.getKey());
-
-        if (hookTier == null) {
-            return;
-        }
-
-        if (!hasAmount(matrix, 4, Material.CHAIN, 2)
-                || !hasAmount(
-                        matrix,
-                        6,
-                        Material.STICK,
-                        2
-                )) {
-            inventory.setResult(null);
-        }
-    }
-
-    @EventHandler
-    public void onCraft(CraftItemEvent event) {
-        if (!(event.getRecipe() instanceof Keyed keyed)) {
-            return;
-        }
-
-        GrapplingHookTier headTier =
-                items.getHeadRecipeTier(keyed.getKey());
-        GrapplingHookTier hookTier =
-                items.getHookRecipeTier(keyed.getKey());
-
-        if (headTier == null && hookTier == null) {
-            return;
-        }
-
-        if (event.isShiftClick()) {
-            event.setCancelled(true);
-            event.getWhoClicked().sendMessage(
-                    Component.text(
-                            "Greifhaken bitte einzeln craften.",
-                            NamedTextColor.RED
-                    )
-            );
-            return;
-        }
-
-        CraftingInventory inventory =
-                (CraftingInventory) event.getInventory();
-        ItemStack[] matrix = inventory.getMatrix();
-
-        if (headTier != null) {
-            if (!hasAmount(matrix, 4, Material.STRING, 2)) {
-                event.setCancelled(true);
-                return;
-            }
-
-            consumeExtra(matrix, 4);
-            inventory.setMatrix(matrix);
-            return;
-        }
-
-        if (!hasAmount(matrix, 4, Material.CHAIN, 2)
-                || !hasAmount(
-                        matrix,
-                        6,
-                        Material.STICK,
-                        2
-                )) {
-            event.setCancelled(true);
-            return;
-        }
-
-        consumeExtra(matrix, 4);
-        consumeExtra(matrix, 6);
-        inventory.setMatrix(matrix);
-    }
-
-    private boolean hasAmount(
-            ItemStack[] matrix,
-            int slot,
-            Material material,
-            int amount
-    ) {
-        if (slot < 0 || slot >= matrix.length) {
-            return false;
-        }
-
-        ItemStack item = matrix[slot];
-
-        return item != null
-                && item.getType() == material
-                && item.getAmount() >= amount;
-    }
-
-    private void consumeExtra(ItemStack[] matrix, int slot) {
-        ItemStack item = matrix[slot];
-
-        if (item == null) {
-            return;
-        }
-
-        item.setAmount(item.getAmount() - 1);
     }
 
     @EventHandler
