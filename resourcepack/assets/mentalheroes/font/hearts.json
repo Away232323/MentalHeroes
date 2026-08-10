@@ -3,8 +3,8 @@
     {
       "type": "bitmap",
       "file": "mentalheroes:font/hearts.png",
-      "ascent": 13,
-      "height": 16,
+      "ascent": -29,
+      "height": 6,
       "chars": [
         "\uE000",
         "\uE001",
