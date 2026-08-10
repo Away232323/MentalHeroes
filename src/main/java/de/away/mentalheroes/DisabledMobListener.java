@@ -8,6 +8,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.EntityTransformEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 
 public final class DisabledMobListener implements Listener {
@@ -34,6 +35,17 @@ public final class DisabledMobListener implements Listener {
         }
     }
 
+    @EventHandler(
+            priority = EventPriority.HIGHEST,
+            ignoreCancelled = false
+    )
+    public void onEntityTransform(EntityTransformEvent event) {
+        if (event.getTransformedEntities().stream()
+                .anyMatch(entity -> isDisabled(entity.getType()))) {
+            event.setCancelled(true);
+        }
+    }
+
     public void removeExistingMobs() {
         for (World world : Bukkit.getWorlds()) {
             for (Entity entity : world.getEntities()) {
@@ -46,6 +58,9 @@ public final class DisabledMobListener implements Listener {
 
     private boolean isDisabled(EntityType type) {
         return type == EntityType.PHANTOM
-                || type == EntityType.ENDERMITE;
+                || type == EntityType.ENDERMITE
+                || type == EntityType.VILLAGER
+                || type == EntityType.WANDERING_TRADER
+                || type == EntityType.ZOMBIE_VILLAGER;
     }
 }

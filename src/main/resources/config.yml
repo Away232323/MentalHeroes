@@ -18,7 +18,23 @@ grappling-hook:
 
   # Flight and pulling speed
   projectile-speed: 2.25
-  maximum-pull-speed: 1.85
+  maximum-pull-speed: 2.20
+  base-pull-speed: 0.72
+  pull-speed-per-block: 0.055
+  vertical-boost: 0.22
+  maximum-vertical-pull-speed: 1.80
+
+pvp:
+  # Keep this disabled during the first three server days.
+  # Operators can change it at any time with /pvp on or /pvp off.
+  enabled: false
+
+playtime:
+  # Keep this enabled during the first three server days.
+  # Operators can later remove the limit with /playtime disable.
+  enabled: true
+  daily-seconds: 3600
+  reset-timezone: "Europe/Vienna"
 
 ban:
   reason: "<red><bold>You have lost all of your Hero Hearts!</bold></red>"

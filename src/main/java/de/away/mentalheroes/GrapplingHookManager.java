@@ -497,15 +497,34 @@ public final class GrapplingHookManager implements Listener {
 
         double configuredMaximum = plugin.getConfig().getDouble(
                 "grappling-hook.maximum-pull-speed",
-                1.85D
+                2.20D
+        );
+        double baseSpeed = plugin.getConfig().getDouble(
+                "grappling-hook.base-pull-speed",
+                0.72D
+        );
+        double speedPerBlock = plugin.getConfig().getDouble(
+                "grappling-hook.pull-speed-per-block",
+                0.055D
         );
         double speed = Math.min(
                 configuredMaximum,
-                0.55D + (distance * 0.04D)
+                baseSpeed + (distance * speedPerBlock)
         );
 
         Vector velocity = difference.normalize().multiply(speed);
-        velocity.setY(Math.min(1.65D, velocity.getY() + 0.18D));
+        double verticalBoost = plugin.getConfig().getDouble(
+                "grappling-hook.vertical-boost",
+                0.22D
+        );
+        double maximumVerticalSpeed = plugin.getConfig().getDouble(
+                "grappling-hook.maximum-vertical-pull-speed",
+                1.80D
+        );
+        velocity.setY(Math.min(
+                maximumVerticalSpeed,
+                velocity.getY() + verticalBoost
+        ));
         player.setVelocity(velocity);
     }
 

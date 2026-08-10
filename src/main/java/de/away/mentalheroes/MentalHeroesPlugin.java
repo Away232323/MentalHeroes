@@ -14,6 +14,10 @@ public final class MentalHeroesPlugin extends JavaPlugin {
     private HeartLossAnimationManager heartLossAnimationManager;
     private BackpackManager backpackManager;
     private CarryManager carryManager;
+    private PvpManager pvpManager;
+    private PlaytimeManager playtimeManager;
+    private RestrictedEnchantmentManager restrictedEnchantmentManager;
+    private DimensionManager dimensionManager;
 
     @Override
     public void onEnable() {
@@ -42,6 +46,12 @@ public final class MentalHeroesPlugin extends JavaPlugin {
 
         carryManager = new CarryManager(this);
 
+        pvpManager = new PvpManager(this);
+        playtimeManager = new PlaytimeManager(this);
+        restrictedEnchantmentManager =
+                new RestrictedEnchantmentManager(this);
+        dimensionManager = new DimensionManager(this);
+
         DisabledMobListener disabledMobListener =
                 new DisabledMobListener();
 
@@ -54,6 +64,22 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         );
 
         getServer().getPluginManager().registerEvents(heroListener, this);
+        getServer().getPluginManager().registerEvents(
+                pvpManager,
+                this
+        );
+        getServer().getPluginManager().registerEvents(
+                playtimeManager,
+                this
+        );
+        getServer().getPluginManager().registerEvents(
+                restrictedEnchantmentManager,
+                this
+        );
+        getServer().getPluginManager().registerEvents(
+                dimensionManager,
+                this
+        );
         getServer().getPluginManager().registerEvents(
                 heartLossAnimationManager,
                 this
@@ -99,11 +125,37 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         command.setExecutor(commandHandler);
         command.setTabCompleter(commandHandler);
 
+        PluginCommand pvpCommand = getCommand("pvp");
+
+        if (pvpCommand == null) {
+            throw new IllegalStateException(
+                    "The pvp command is missing from plugin.yml!"
+            );
+        }
+
+        pvpCommand.setExecutor(pvpManager);
+        pvpCommand.setTabCompleter(pvpManager);
+
+        PluginCommand playtimeCommand = getCommand("playtime");
+
+        if (playtimeCommand == null) {
+            throw new IllegalStateException(
+                    "The playtime command is missing from plugin.yml!"
+            );
+        }
+
+        playtimeCommand.setExecutor(playtimeManager);
+        playtimeCommand.setTabCompleter(playtimeManager);
+
         combatManager.start();
         hudManager.start();
         grapplingHookManager.start();
         backpackManager.start();
         carryManager.start();
+        pvpManager.start();
+        playtimeManager.start();
+        restrictedEnchantmentManager.start();
+        dimensionManager.start();
         disabledMobListener.removeExistingMobs();
 
         getLogger().info("MentalHeroes has been enabled successfully!");
@@ -133,6 +185,14 @@ public final class MentalHeroesPlugin extends JavaPlugin {
 
         if (carryManager != null) {
             carryManager.stop();
+        }
+
+        if (playtimeManager != null) {
+            playtimeManager.stop();
+        }
+
+        if (restrictedEnchantmentManager != null) {
+            restrictedEnchantmentManager.stop();
         }
 
         if (heartManager != null) {
