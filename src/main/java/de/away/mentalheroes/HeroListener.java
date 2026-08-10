@@ -134,6 +134,21 @@ public final class HeroListener implements Listener {
             return;
         }
 
+        Player killer = player.getKiller();
+
+        if (killer != null
+                && combatManager.areOpponents(
+                        killer.getUniqueId(),
+                        uuid
+                )) {
+            combatManager.clear(killer.getUniqueId());
+            sendConfigured(
+                    killer,
+                    "messages.combat-ended",
+                    Map.of()
+            );
+        }
+
         combatManager.clear(uuid);
 
         int currentHearts = heartManager.getHearts(uuid);
