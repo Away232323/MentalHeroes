@@ -8,6 +8,7 @@ public final class MentalHeroesPlugin extends JavaPlugin {
     private HeartManager heartManager;
     private CombatManager combatManager;
     private HudManager hudManager;
+    private GrapplingHookManager grapplingHookManager;
 
     @Override
     public void onEnable() {
@@ -17,6 +18,15 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         combatManager = new CombatManager(this);
         hudManager = new HudManager(this, heartManager, combatManager);
 
+        GrapplingHookItems grapplingHookItems =
+                new GrapplingHookItems(this);
+        grapplingHookItems.registerRecipes();
+
+        grapplingHookManager = new GrapplingHookManager(
+                this,
+                grapplingHookItems
+        );
+
         HeroListener heroListener = new HeroListener(
                 this,
                 heartManager,
@@ -25,6 +35,16 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         );
 
         getServer().getPluginManager().registerEvents(heroListener, this);
+        getServer().getPluginManager().registerEvents(
+                grapplingHookManager,
+                this
+        );
+        getServer().getPluginManager().registerEvents(
+                new GrapplingHookCraftingListener(
+                        grapplingHookItems
+                ),
+                this
+        );
 
         MentalHeroesCommand commandHandler = new MentalHeroesCommand(
                 this,
@@ -45,6 +65,7 @@ public final class MentalHeroesPlugin extends JavaPlugin {
 
         combatManager.start();
         hudManager.start();
+        grapplingHookManager.start();
 
         getLogger().info("MentalHeroes wurde erfolgreich aktiviert!");
     }
@@ -57,6 +78,10 @@ public final class MentalHeroesPlugin extends JavaPlugin {
 
         if (hudManager != null) {
             hudManager.stop();
+        }
+
+        if (grapplingHookManager != null) {
+            grapplingHookManager.stop();
         }
 
         if (heartManager != null) {

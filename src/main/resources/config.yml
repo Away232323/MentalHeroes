@@ -10,6 +10,15 @@ hearts:
   maximum: 3
   starting-hearts: 3
 
+grappling-hook:
+  # Maximale Entfernung und Lebenszeit einer Verbindung
+  max-distance: 50.0
+  max-lifetime-ticks: 1200
+
+  # Flug- und Zuggeschwindigkeit
+  projectile-speed: 2.25
+  maximum-pull-speed: 1.85
+
 ban:
   reason: "<red><bold>Du hast alle deine Heldenherzen verloren!</bold></red>"
 

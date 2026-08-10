@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "mentalheroes:item/diamond_grappling_head"
+  }
+}
