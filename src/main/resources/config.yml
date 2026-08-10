@@ -4,7 +4,7 @@ combat:
   extension-seconds: 20
   maximum-seconds: 150
 
-  # Verhindert, dass Spieler sich durch Verlassen retten
+  # Prevents players from escaping combat by logging out
   logout-loses-heart: true
 
 hearts:
@@ -12,28 +12,28 @@ hearts:
   starting-hearts: 3
 
 grappling-hook:
-  # Der Haken fliegt und reicht maximal 25 Bloecke weit
+  # Maximum flight distance of the grappling hook
   max-distance: 25.0
   max-lifetime-ticks: 1200
 
-  # Flug- und Zuggeschwindigkeit
+  # Flight and pulling speed
   projectile-speed: 2.25
   maximum-pull-speed: 1.85
 
 ban:
-  reason: "<red><bold>Du hast alle deine Heldenherzen verloren!</bold></red>"
+  reason: "<red><bold>You have lost all of your Hero Hearts!</bold></red>"
 
 messages:
   prefix: "<dark_aqua><bold>MentalHeroes</bold></dark_aqua> <dark_gray>»</dark_gray> "
 
-  no-permission: "<red>Dafür hast du keine Berechtigung.</red>"
-  player-not-found: "<red>Dieser Spieler wurde nicht gefunden.</red>"
-  invalid-number: "<red>Die Herzen müssen zwischen 0 und 3 liegen.</red>"
+  no-permission: "<red>You do not have permission to do that.</red>"
+  player-not-found: "<red>That player could not be found.</red>"
+  invalid-number: "<red>Hearts must be between 0 and 3.</red>"
 
-  own-hearts: "<gray>Du besitzt aktuell <aqua><hearts></aqua> Herzen.</gray>"
-  other-hearts: "<gray><player> besitzt aktuell <aqua><hearts></aqua> Herzen.</gray>"
-  hearts-set: "<green>Die Herzen von <player> wurden auf <hearts> gesetzt.</green>"
-  hearts-received: "<green>Deine Herzen wurden auf <hearts> gesetzt.</green>"
+  own-hearts: "<gray>You currently have <aqua><hearts></aqua> hearts.</gray>"
+  other-hearts: "<gray><player> currently has <aqua><hearts></aqua> hearts.</gray>"
+  hearts-set: "<green>Set <player>'s hearts to <hearts>.</green>"
+  hearts-received: "<green>Your hearts were set to <hearts>.</green>"
 
-  heart-lost: "<red>Du hast ein blaues Herz verloren! Verbleibend: <hearts></red>"
-  combat-ended: "<green>Du bist nicht mehr im Kampf.</green>"
+  heart-lost: "<red>You lost a blue heart! Remaining: <hearts></red>"
+  combat-ended: "<green>You are no longer in combat.</green>"

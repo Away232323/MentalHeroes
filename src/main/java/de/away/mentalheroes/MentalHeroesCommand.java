@@ -11,6 +11,7 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -24,16 +25,19 @@ public final class MentalHeroesCommand
     private final MentalHeroesPlugin plugin;
     private final HeartManager heartManager;
     private final HudManager hudManager;
+    private final GrapplingHookItems grapplingHookItems;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
     public MentalHeroesCommand(
             MentalHeroesPlugin plugin,
             HeartManager heartManager,
-            HudManager hudManager
+            HudManager hudManager,
+            GrapplingHookItems grapplingHookItems
     ) {
         this.plugin = plugin;
         this.heartManager = heartManager;
         this.hudManager = hudManager;
+        this.grapplingHookItems = grapplingHookItems;
     }
 
     @Override
@@ -53,6 +57,8 @@ public final class MentalHeroesCommand
         switch (subCommand) {
             case "hearts" -> handleHearts(sender, label, args);
             case "sethearts" -> handleSetHearts(sender, label, args);
+            case "grappler", "grapplinghook" ->
+                    handleGrappler(sender, label, args);
             default -> sendHelp(sender, label);
         }
 
@@ -68,9 +74,9 @@ public final class MentalHeroesCommand
             if (!(sender instanceof Player player)) {
                 sendRaw(
                         sender,
-                        "<red>Benutzung: /"
+                        "<red>Usage: /"
                                 + label
-                                + " hearts <Spieler></red>"
+                                + " hearts <player></red>"
                 );
                 return;
             }
@@ -98,9 +104,9 @@ public final class MentalHeroesCommand
         if (args.length != 2) {
             sendRaw(
                     sender,
-                    "<red>Benutzung: /"
+                    "<red>Usage: /"
                             + label
-                            + " hearts [Spieler]</red>"
+                            + " hearts [player]</red>"
             );
             return;
         }
@@ -152,9 +158,9 @@ public final class MentalHeroesCommand
         if (args.length != 3) {
             sendRaw(
                     sender,
-                    "<red>Benutzung: /"
+                    "<red>Usage: /"
                             + label
-                            + " sethearts <Spieler> <0-3></red>"
+                            + " sethearts <player> <0-3></red>"
             );
             return;
         }
@@ -225,6 +231,88 @@ public final class MentalHeroesCommand
         );
     }
 
+    private void handleGrappler(
+            CommandSender sender,
+            String label,
+            String[] args
+    ) {
+        if (!sender.hasPermission(
+                "mentalheroes.command.grappler"
+        )) {
+            sendConfigured(sender, "messages.no-permission");
+            return;
+        }
+
+        if (args.length < 2 || args.length > 3) {
+            sendRaw(
+                    sender,
+                    "<red>Usage: /"
+                            + label
+                            + " grappler <copper|gold|iron|diamond|netherite> [player]</red>"
+            );
+            return;
+        }
+
+        GrapplingHookTier tier = GrapplingHookTier.fromId(args[1]);
+
+        if (tier == null) {
+            sendRaw(
+                    sender,
+                    "<red>Unknown tier. Use copper, gold, iron, diamond, or netherite.</red>"
+            );
+            return;
+        }
+
+        Player target;
+
+        if (args.length == 3) {
+            target = Bukkit.getPlayerExact(args[2]);
+
+            if (target == null) {
+                sendConfigured(sender, "messages.player-not-found");
+                return;
+            }
+        } else if (sender instanceof Player player) {
+            target = player;
+        } else {
+            sendRaw(
+                    sender,
+                    "<red>Console usage: /"
+                            + label
+                            + " grappler <tier> <player></red>"
+            );
+            return;
+        }
+
+        ItemStack grappler = grapplingHookItems.createHook(tier);
+
+        for (ItemStack leftover : target.getInventory()
+                .addItem(grappler).values()) {
+            target.getWorld().dropItemNaturally(
+                    target.getLocation(),
+                    leftover
+            );
+        }
+
+        sendRaw(
+                sender,
+                "<green>Gave <white>"
+                        + target.getName()
+                        + "</white> a <white>"
+                        + tier.displayName()
+                        + " Grappling Hook</white>.</green>"
+        );
+
+        if (target != sender) {
+            sendRaw(
+                    target,
+                    "<green>You received a <white>"
+                            + tier.displayName()
+                            + " Grappling Hook</white>.</green>"
+            );
+        }
+    }
+
     private OfflinePlayer findPlayer(String name) {
         Player onlinePlayer = Bukkit.getPlayerExact(name);
 
@@ -238,7 +326,7 @@ public final class MentalHeroesCommand
     private void banPlayer(OfflinePlayer target) {
         String reasonText = plugin.getConfig().getString(
                 "ban.reason",
-                "<red>Du hast alle deine Heldenherzen verloren!</red>"
+                "<red>You have lost all of your Hero Hearts!</red>"
         );
 
         Component reasonComponent =
@@ -284,7 +372,7 @@ public final class MentalHeroesCommand
                 sender,
                 "<gray>/"
                         + label
-                        + " hearts [Spieler]</gray>"
+                        + " hearts [player]</gray>"
         );
 
         if (sender.hasPermission(
@@ -294,7 +382,18 @@ public final class MentalHeroesCommand
                     sender,
                     "<gray>/"
                             + label
-                            + " sethearts <Spieler> <0-3></gray>"
+                            + " sethearts <player> <0-3></gray>"
+            );
+        }
+
+        if (sender.hasPermission(
+                "mentalheroes.command.grappler"
+        )) {
+            sendRaw(
+                    sender,
+                    "<gray>/"
+                            + label
+                            + " grappler <tier> [player]</gray>"
             );
         }
     }
@@ -318,7 +417,7 @@ public final class MentalHeroesCommand
 
         String message = plugin.getConfig().getString(
                 path,
-                "<red>Fehlende Nachricht: " + path + "</red>"
+                "<red>Missing message: " + path + "</red>"
         );
 
         for (Map.Entry<String, String> replacement
@@ -365,6 +464,12 @@ public final class MentalHeroesCommand
                 subCommands.add("sethearts");
             }
 
+            if (sender.hasPermission(
+                    "mentalheroes.command.grappler"
+            )) {
+                subCommands.add("grappler");
+            }
+
             return filter(subCommands, args[0]);
         }
 
@@ -381,12 +486,42 @@ public final class MentalHeroesCommand
             return filter(playerNames, args[1]);
         }
 
+        if (args.length == 2
+                && (
+                args[0].equalsIgnoreCase("grappler")
+                        || args[0].equalsIgnoreCase("grapplinghook")
+        )) {
+            return filter(
+                    List.of(
+                            "copper",
+                            "gold",
+                            "iron",
+                            "diamond",
+                            "netherite"
+                    ),
+                    args[1]
+            );
+        }
+
         if (args.length == 3
                 && args[0].equalsIgnoreCase("sethearts")) {
             return filter(
                     List.of("0", "1", "2", "3"),
                     args[2]
             );
+        }
+
+        if (args.length == 3
+                && (
+                args[0].equalsIgnoreCase("grappler")
+                        || args[0].equalsIgnoreCase("grapplinghook")
+        )) {
+            List<String> playerNames = Bukkit.getOnlinePlayers()
+                    .stream()
+                    .map(Player::getName)
+                    .toList();
+
+            return filter(playerNames, args[2]);
         }
 
         return List.of();

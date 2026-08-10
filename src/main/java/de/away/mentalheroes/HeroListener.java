@@ -32,6 +32,7 @@ public final class HeroListener implements Listener {
     private final HeartManager heartManager;
     private final CombatManager combatManager;
     private final HudManager hudManager;
+    private final HeartLossAnimationManager heartLossAnimationManager;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
     private final Map<UUID, UUID> crystalAttackers = new HashMap<>();
@@ -40,12 +41,14 @@ public final class HeroListener implements Listener {
             MentalHeroesPlugin plugin,
             HeartManager heartManager,
             CombatManager combatManager,
-            HudManager hudManager
+            HudManager hudManager,
+            HeartLossAnimationManager heartLossAnimationManager
     ) {
         this.plugin = plugin;
         this.heartManager = heartManager;
         this.combatManager = combatManager;
         this.hudManager = hudManager;
+        this.heartLossAnimationManager = heartLossAnimationManager;
     }
 
     @EventHandler
@@ -66,14 +69,11 @@ public final class HeroListener implements Listener {
     }
 
     @EventHandler(
-            priority = EventPriority.MONITOR,
+            priority = EventPriority.HIGH,
             ignoreCancelled = true
     )
     public void onPlayerDamage(EntityDamageByEntityEvent event) {
-        /*
-         * Wenn ein Spieler einen Endkristall zerstört,
-         * merken wir uns diesen Spieler kurz als Verursacher.
-         */
+        // Remember who destroyed an end crystal for its explosion damage.
         if (event.getEntity() instanceof EnderCrystal crystal) {
             Player crystalAttacker = findResponsiblePlayer(
                     event.getDamager()
@@ -129,18 +129,33 @@ public final class HeroListener implements Listener {
     public void onDeath(PlayerDeathEvent event) {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
+        boolean animatedHeartLoss =
+                heartLossAnimationManager.consumeAnimatedDeath(uuid);
 
-        if (!combatManager.isInCombat(uuid)) {
+        if (!combatManager.isInCombat(uuid) && !animatedHeartLoss) {
             return;
         }
 
         Player killer = player.getKiller();
+        UUID pendingKiller =
+                heartLossAnimationManager.consumePendingKiller(uuid);
+
+        if (pendingKiller != null) {
+            Player pendingPlayer = Bukkit.getPlayer(pendingKiller);
+
+            if (pendingPlayer != null) {
+                killer = pendingPlayer;
+            }
+        }
 
         if (killer != null
-                && combatManager.areOpponents(
+                && (
+                combatManager.areOpponents(
                         killer.getUniqueId(),
                         uuid
-                )) {
+                )
+                        || killer.getUniqueId().equals(pendingKiller)
+        )) {
             combatManager.clear(killer.getUniqueId());
             sendConfigured(
                     killer,
@@ -191,6 +206,8 @@ public final class HeroListener implements Listener {
     public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
+
+        hudManager.hideCombatBar(player);
 
         if (!combatManager.isInCombat(uuid)) {
             return;
@@ -259,7 +276,7 @@ public final class HeroListener implements Listener {
     private void banPlayer(OfflinePlayer player) {
         String rawReason = plugin.getConfig().getString(
                 "ban.reason",
-                "<red>Du hast alle deine Heldenherzen verloren!</red>"
+                "<red>You have lost all of your Hero Hearts!</red>"
         );
 
         Component reasonComponent =
@@ -294,7 +311,7 @@ public final class HeroListener implements Listener {
 
         String message = plugin.getConfig().getString(
                 path,
-                "<red>Fehlende Nachricht: " + path + "</red>"
+                "<red>Missing message: " + path + "</red>"
         );
 
         for (Map.Entry<String, String> replacement

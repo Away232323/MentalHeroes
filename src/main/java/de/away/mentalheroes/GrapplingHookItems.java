@@ -121,8 +121,18 @@ public final class GrapplingHookItems {
         ItemStack item = new ItemStack(Material.TRIPWIRE_HOOK);
         ItemMeta meta = item.getItemMeta();
 
+        applyHeadAppearance(meta, tier);
+        tag(meta, ITEM_KIND_HEAD, tier);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private void applyHeadAppearance(
+            ItemMeta meta,
+            GrapplingHookTier tier
+    ) {
         Component name = Component.text(
-                        tier.displayName() + "-Hakenkopf",
+                        tier.displayName() + " Grappling Hook Head",
                         tier.textColor()
                 )
                 .decoration(TextDecoration.ITALIC, false);
@@ -134,34 +144,45 @@ public final class GrapplingHookItems {
                         tier.id() + "_grappling_head"
                 )
         );
-
-        tag(meta, ITEM_KIND_HEAD, tier);
-        item.setItemMeta(meta);
-        return item;
     }
 
     public ItemStack createHook(GrapplingHookTier tier) {
         ItemStack item = new ItemStack(Material.FISHING_ROD);
         ItemMeta rawMeta = item.getItemMeta();
 
+        applyHookAppearance(rawMeta, tier);
+        tag(rawMeta, ITEM_KIND_HOOK, tier);
+
+        if (rawMeta instanceof Damageable damageable) {
+            damageable.setDamage(0);
+        }
+
+        item.setItemMeta(rawMeta);
+        return item;
+    }
+
+    private void applyHookAppearance(
+            ItemMeta rawMeta,
+            GrapplingHookTier tier
+    ) {
         Component name = Component.text(
-                        tier.displayName() + "-Greifhaken",
+                        tier.displayName() + " Grappling Hook",
                         tier.textColor()
                 )
                 .decoration(TextDecoration.ITALIC, false);
 
         rawMeta.itemName(name);
         rawMeta.lore(List.of(
-                loreLine("Rechtsklick: Haken schießen"),
-                loreLine("F: Zum Haken ziehen"),
-                loreLine("Kein Fallschaden während der Verbindung"),
+                loreLine("Right-click: Fire / retract hook"),
+                loreLine("F: Pull toward the hook"),
+                loreLine("No fall damage while attached"),
                 Component.text(
-                                "Haltbarkeit: " + tier.durability(),
+                                "Durability: " + tier.durability(),
                                 NamedTextColor.DARK_GRAY
                         )
                         .decoration(TextDecoration.ITALIC, false),
                 Component.text(
-                                "Nur mit Haltbarkeit verzauberbar",
+                                "Only Unbreaking can be applied",
                                 NamedTextColor.DARK_GRAY
                         )
                         .decoration(TextDecoration.ITALIC, false)
@@ -174,15 +195,29 @@ public final class GrapplingHookItems {
                 )
         );
 
-        tag(rawMeta, ITEM_KIND_HOOK, tier);
-
         if (rawMeta instanceof Damageable damageable) {
             damageable.setMaxDamage(tier.durability());
-            damageable.setDamage(0);
+        }
+    }
+
+    public void refreshAppearance(ItemStack item) {
+        GrapplingHookTier tier = getTier(item);
+
+        if (tier == null) {
+            return;
         }
 
-        item.setItemMeta(rawMeta);
-        return item;
+        ItemMeta meta = item.getItemMeta();
+
+        if (isHook(item)) {
+            applyHookAppearance(meta, tier);
+        } else if (isHead(item)) {
+            applyHeadAppearance(meta, tier);
+        } else {
+            return;
+        }
+
+        item.setItemMeta(meta);
     }
 
     public ItemStack createChainLink(GrapplingHookTier tier) {

@@ -128,7 +128,7 @@ public final class CombatManager {
 
                 String message = plugin.getConfig().getString(
                         "messages.combat-ended",
-                        "<green>Du bist nicht mehr im Kampf.</green>"
+                        "<green>You are no longer in combat.</green>"
                 );
 
                 Component component = miniMessage.deserialize(

@@ -124,7 +124,7 @@ public final class GrapplingHookCraftingListener
         event.setCancelled(true);
         event.getEnchanter().sendMessage(
                 Component.text(
-                        "Greifhaken können nur Haltbarkeit erhalten.",
+                        "Grappling hooks can only receive Unbreaking.",
                         NamedTextColor.RED
                 )
         );

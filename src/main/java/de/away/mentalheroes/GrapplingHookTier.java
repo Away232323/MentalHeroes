@@ -10,7 +10,7 @@ public enum GrapplingHookTier {
 
     COPPER(
             "copper",
-            "Kupfer",
+            "Copper",
             Material.COPPER_INGOT,
             250,
             NamedTextColor.GOLD,
@@ -26,7 +26,7 @@ public enum GrapplingHookTier {
     ),
     IRON(
             "iron",
-            "Eisen",
+            "Iron",
             Material.IRON_INGOT,
             500,
             NamedTextColor.WHITE,
@@ -34,7 +34,7 @@ public enum GrapplingHookTier {
     ),
     DIAMOND(
             "diamond",
-            "Diamant",
+            "Diamond",
             Material.DIAMOND,
             15_000,
             NamedTextColor.AQUA,

@@ -1,27 +1,26 @@
 # MentalHeroes
 
-Paper-Plugin für Minecraft 1.21.6 mit Heldenherzen, Combat-System
-und Greifhaken.
+Paper plugin for Minecraft 1.21.6 with Hero Hearts, a combat
+system, and grappling hooks.
 
-## Greifhaken
+## Grappling hooks
 
-- Rechtsklick: Haken abschießen
-- F: zum eingeschlagenen Haken ziehen
-- Kein Fallschaden, solange der Haken verbunden ist
-- Die Verbindung bleibt beim Wechseln des Hotbar-Slots erhalten
-- Nur Haltbarkeit/Unbreaking ist als Verzauberung erlaubt
+- Right-click: fire or retract the hook
+- F: pull toward the attached hook
+- No fall damage while attached
+- The connection stays active while changing hotbar slots
+- Unbreaking is the only allowed enchantment
 
-| Material | Haltbarkeit |
+| Material | Durability |
 | --- | ---: |
-| Kupfer | 250 |
+| Copper | 250 |
 | Gold | 250 |
-| Eisen | 500 |
-| Diamant | 15.000 |
-| Netherite | 25.000 |
+| Iron | 500 |
+| Diamond | 15,000 |
+| Netherite | 25,000 |
 
-Der Hakenkopf wird aus drei Materialeinheiten und zwei Fäden
-hergestellt. Für den fertigen Greifhaken werden der Hakenkopf,
-zwei Ketten und zwei Stöcke diagonal in die Werkbank gelegt.
-Der Netherite-Greifhaken entsteht im Schmiedetisch aus dem
-Diamant-Greifhaken, einer Netherite-Schmiedevorlage und einem
-Netheritebarren.
+Craft the hook head from three units of its tier material and one
+iron nugget. Craft the finished hook diagonally from one hook head,
+one chain, and one stick. Upgrade the Diamond Grappling Hook in a
+smithing table with a Netherite Upgrade Smithing Template and one
+Netherite Ingot.

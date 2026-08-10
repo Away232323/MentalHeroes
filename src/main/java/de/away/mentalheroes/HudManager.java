@@ -1,11 +1,16 @@
 package de.away.mentalheroes;
 
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public final class HudManager {
 
@@ -16,6 +21,7 @@ public final class HudManager {
     private final HeartManager heartManager;
     private final CombatManager combatManager;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
+    private final Map<UUID, BossBar> combatBars = new HashMap<>();
 
     private BukkitTask hudTask;
 
@@ -47,14 +53,27 @@ public final class HudManager {
             hudTask.cancel();
             hudTask = null;
         }
+
+        for (Map.Entry<UUID, BossBar> entry : combatBars.entrySet()) {
+            Player player = Bukkit.getPlayer(entry.getKey());
+
+            if (player != null) {
+                player.hideBossBar(entry.getValue());
+            }
+        }
+
+        combatBars.clear();
     }
 
     public void update(Player player) {
         int hearts = heartManager.getHearts(player.getUniqueId());
         Component heartDisplay = createHeartDisplay(hearts);
 
+        // Hearts always stay in their own centered action bar.
+        player.sendActionBar(heartDisplay);
+
         if (!combatManager.isInCombat(player.getUniqueId())) {
-            player.sendActionBar(heartDisplay);
+            hideCombatBar(player);
             return;
         }
 
@@ -63,16 +82,46 @@ public final class HudManager {
         );
 
         Component combatDisplay = miniMessage.deserialize(
-                "<red><bold>Im Kampf!</bold></red> "
-                        + "<gray>(<white>"
+                "<red><bold>IN COMBAT</bold></red> "
+                        + "<gray>• <white>"
                         + seconds
-                        + "s"
-                        + "</white> übrig)</gray> "
+                        + "s REMAINING</white></gray>"
         );
 
-        player.sendActionBar(
-                combatDisplay.append(heartDisplay)
+        int maximumSeconds = Math.max(
+                1,
+                plugin.getConfig().getInt(
+                        "combat.maximum-seconds",
+                        150
+                )
         );
+
+        float progress = Math.max(
+                0.0F,
+                Math.min(1.0F, (float) seconds / maximumSeconds)
+        );
+
+        BossBar combatBar = combatBars.computeIfAbsent(
+                player.getUniqueId(),
+                ignored -> BossBar.bossBar(
+                        combatDisplay,
+                        progress,
+                        BossBar.Color.RED,
+                        BossBar.Overlay.PROGRESS
+                )
+        );
+
+        combatBar.name(combatDisplay);
+        combatBar.progress(progress);
+        player.showBossBar(combatBar);
+    }
+
+    public void hideCombatBar(Player player) {
+        BossBar combatBar = combatBars.remove(player.getUniqueId());
+
+        if (combatBar != null) {
+            player.hideBossBar(combatBar);
+        }
     }
 
     private Component createHeartDisplay(int hearts) {

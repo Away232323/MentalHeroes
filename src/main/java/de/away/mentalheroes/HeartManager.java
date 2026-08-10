@@ -42,7 +42,7 @@ public final class HeartManager {
                 playerHearts.put(uuid, clamp(hearts));
             } catch (IllegalArgumentException exception) {
                 plugin.getLogger().warning(
-                        "Ungültige UUID in data.yml: " + uuidText
+                        "Invalid UUID in data.yml: " + uuidText
                 );
             }
         }
@@ -96,7 +96,7 @@ public final class HeartManager {
             data.save(dataFile);
         } catch (IOException exception) {
             plugin.getLogger().severe(
-                    "Die data.yml konnte nicht gespeichert werden!"
+                    "The data.yml file could not be saved!"
             );
             exception.printStackTrace();
         }

@@ -3,24 +3,28 @@ version: 1.2.0
 main: de.away.mentalheroes.MentalHeroesPlugin
 api-version: '1.21.6'
 author: Away
-description: Heldenherzen, Combat und Greifhaken für Paper 1.21.6
+description: Hero hearts, combat, and grappling hooks for Paper 1.21.6
 
 commands:
   mentalheroes:
-    description: Hauptcommand von MentalHeroes
-    usage: /mentalheroes <hearts|sethearts>
+    description: Main MentalHeroes command
+    usage: /mentalheroes <hearts|sethearts|grappler>
     aliases:
       - mh
 
 permissions:
   mentalheroes.command.hearts:
-    description: Erlaubt das Anzeigen der eigenen Herzen
+    description: Allows players to view their own hearts
     default: true
 
   mentalheroes.command.hearts.others:
-    description: Erlaubt das Anzeigen der Herzen anderer Spieler
+    description: Allows players to view other players' hearts
     default: true
 
   mentalheroes.command.sethearts:
-    description: Erlaubt das Setzen von Spielerherzen
+    description: Allows setting player hearts
+    default: op
+
+  mentalheroes.command.grappler:
+    description: Allows giving grappling hooks by command
     default: op

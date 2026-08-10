@@ -1,1 +1,1 @@
-Hier befindet sich die Herzgrafik.
+This folder contains the heart HUD graphics.

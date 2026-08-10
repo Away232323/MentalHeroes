@@ -22,6 +22,7 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
@@ -84,6 +85,16 @@ public final class GrapplingHookManager implements Listener {
         }
 
         sessions.clear();
+    }
+
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        for (ItemStack item : event.getPlayer()
+                .getInventory().getContents()) {
+            if (item != null) {
+                items.refreshAppearance(item);
+            }
+        }
     }
 
     @EventHandler(
@@ -289,7 +300,7 @@ public final class GrapplingHookManager implements Listener {
         if (!session.attached) {
             event.getPlayer().sendActionBar(
                     Component.text(
-                            "Der Haken fliegt noch …",
+                            "The hook is still flying…",
                             NamedTextColor.GRAY
                     )
             );
