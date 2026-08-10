@@ -21,6 +21,9 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -28,6 +31,7 @@ import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Transformation;
@@ -116,9 +120,18 @@ public final class GrapplingHookManager implements Listener {
         }
 
         Player player = event.getPlayer();
-        ItemStack item = hand == EquipmentSlot.HAND
-                ? player.getInventory().getItemInMainHand()
-                : player.getInventory().getItemInOffHand();
+
+        if (hand != EquipmentSlot.HAND) {
+            if (items.isHook(
+                    player.getInventory().getItemInOffHand()
+            )) {
+                event.setCancelled(true);
+            }
+
+            return;
+        }
+
+        ItemStack item = player.getInventory().getItemInMainHand();
 
         GrapplingHookTier tier = items.getTier(item);
 
@@ -140,7 +153,7 @@ public final class GrapplingHookManager implements Listener {
             return;
         }
 
-        shoot(player, hand, tier);
+        shoot(player, EquipmentSlot.HAND, tier);
     }
 
     private void shoot(
@@ -292,6 +305,10 @@ public final class GrapplingHookManager implements Listener {
         );
 
         if (session == null) {
+            if (items.isHook(event.getOffHandItem())) {
+                event.setCancelled(true);
+            }
+
             return;
         }
 
@@ -317,7 +334,53 @@ public final class GrapplingHookManager implements Listener {
         );
     }
 
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) {
+            return;
+        }
+
+        if (event.getClick() == ClickType.SWAP_OFFHAND
+                && items.isHook(event.getCurrentItem())) {
+            event.setCancelled(true);
+            return;
+        }
+
+        if (!(event.getClickedInventory()
+                instanceof PlayerInventory inventory)
+                || event.getSlot() != 40) {
+            return;
+        }
+
+        boolean cursorIsHook = items.isHook(event.getCursor());
+        int hotbarButton = event.getHotbarButton();
+        boolean hotbarItemIsHook = hotbarButton >= 0
+                && items.isHook(inventory.getItem(hotbarButton));
+
+        if (cursorIsHook || hotbarItemIsHook) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onInventoryDrag(InventoryDragEvent event) {
+        if (!items.isHook(event.getOldCursor())) {
+            return;
+        }
+
+        int topSize = event.getView().getTopInventory().getSize();
+        boolean touchesOffhand = event.getRawSlots().stream()
+                .anyMatch(rawSlot -> rawSlot >= topSize
+                        && event.getView().convertSlot(rawSlot) == 40);
+
+        if (touchesOffhand) {
+            event.setCancelled(true);
+        }
+    }
+
     private void tick() {
+        enforceNoOffhandHooks();
+
         Iterator<Map.Entry<UUID, HookSession>> iterator =
                 sessions.entrySet().iterator();
 
@@ -381,6 +444,30 @@ public final class GrapplingHookManager implements Listener {
 
             pullPlayer(player, endpoint);
             session.pullingTicks--;
+        }
+    }
+
+    private void enforceNoOffhandHooks() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            ItemStack offhand = player.getInventory()
+                    .getItemInOffHand();
+
+            if (!items.isHook(offhand)) {
+                continue;
+            }
+
+            ItemStack hook = offhand.clone();
+            player.getInventory().setItemInOffHand(
+                    new ItemStack(Material.AIR)
+            );
+
+            for (ItemStack leftover : player.getInventory()
+                    .addItem(hook).values()) {
+                player.getWorld().dropItemNaturally(
+                        player.getLocation(),
+                        leftover
+                );
+            }
         }
     }
 

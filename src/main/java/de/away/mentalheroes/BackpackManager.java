@@ -5,7 +5,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Keyed;
-import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -38,7 +37,6 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Transformation;
-import org.bukkit.util.Vector;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -474,7 +472,7 @@ public final class BackpackManager implements Listener {
         removeDisplay(player.getUniqueId());
 
         ItemDisplay display = player.getWorld().spawn(
-                backpackLocation(player),
+                player.getLocation(),
                 ItemDisplay.class
         );
 
@@ -486,18 +484,22 @@ public final class BackpackManager implements Listener {
         display.setPersistent(false);
         display.setInvulnerable(true);
         display.setGravity(false);
-        display.setTeleportDuration(1);
+        display.setTeleportDuration(0);
         display.setInterpolationDuration(1);
         display.setViewRange(1.25F);
         display.setShadowRadius(0.0F);
         display.setTransformation(
                 new Transformation(
-                        new Vector3f(0.0F, 0.0F, 0.0F),
+                        new Vector3f(0.0F, -0.62F, -0.42F),
                         new Quaternionf(),
-                        new Vector3f(0.85F, 0.85F, 0.85F),
+                        new Vector3f(0.48F, 0.48F, 0.48F),
                         new Quaternionf()
                 )
         );
+        display.setRotation(player.getLocation().getYaw(), 0.0F);
+
+        player.addPassenger(display);
+        player.hideEntity(plugin, display);
 
         backpackDisplays.put(player.getUniqueId(), display);
     }
@@ -514,28 +516,12 @@ public final class BackpackManager implements Listener {
             return;
         }
 
-        display.teleport(backpackLocation(player));
-    }
-
-    private Location backpackLocation(Player player) {
-        Location playerLocation = player.getLocation();
-        Vector forward = playerLocation.getDirection().setY(0.0D);
-
-        if (forward.lengthSquared() < 0.001D) {
-            double yaw = Math.toRadians(playerLocation.getYaw());
-            forward = new Vector(-Math.sin(yaw), 0.0D, Math.cos(yaw));
-        } else {
-            forward.normalize();
+        if (!player.getPassengers().contains(display)) {
+            player.addPassenger(display);
         }
 
-        double height = player.isSneaking() ? 1.0D : 1.18D;
-        Location location = playerLocation.clone()
-                .add(forward.multiply(-0.31D))
-                .add(0.0D, height, 0.0D);
-
-        location.setYaw(playerLocation.getYaw());
-        location.setPitch(0.0F);
-        return location;
+        display.setRotation(player.getLocation().getYaw(), 0.0F);
+        player.hideEntity(plugin, display);
     }
 
     private void hideBackpack(UUID playerId) {
