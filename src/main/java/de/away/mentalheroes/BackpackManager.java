@@ -49,7 +49,7 @@ import java.util.UUID;
 
 public final class BackpackManager implements Listener {
 
-    private static final int BACKPACK_SIZE = 27;
+    private static final int BACKPACK_SIZE = 54;
     private static final String ITEM_KIND_BACKPACK = "backpack";
 
     private final MentalHeroesPlugin plugin;
@@ -138,7 +138,7 @@ public final class BackpackManager implements Listener {
                 lore("Automatically worn while in your inventory"),
                 lore("Other players can open it from your back"),
                 Component.text(
-                                "Storage: 27 slots",
+                                "Storage: 54 slots",
                                 NamedTextColor.DARK_GRAY
                         )
                         .decoration(TextDecoration.ITALIC, false)
