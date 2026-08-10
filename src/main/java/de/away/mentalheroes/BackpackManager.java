@@ -4,10 +4,10 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
+import org.bukkit.Keyed;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.ItemDisplay;
@@ -16,7 +16,9 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
@@ -43,7 +45,6 @@ import org.joml.Vector3f;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -61,13 +62,12 @@ public final class BackpackManager implements Listener {
 
     private final Map<UUID, Inventory> backpackInventories =
             new HashMap<>();
-    private final Map<UUID, UUID> wornBackpacks = new HashMap<>();
+    private final Map<UUID, UUID> visibleBackpacks = new HashMap<>();
     private final Map<UUID, ItemDisplay> backpackDisplays =
             new HashMap<>();
 
     private YamlConfiguration data;
     private BukkitTask visualTask;
-    private int validationTicks;
 
     public BackpackManager(MentalHeroesPlugin plugin) {
         this.plugin = plugin;
@@ -78,8 +78,7 @@ public final class BackpackManager implements Listener {
                 plugin.getDataFolder(),
                 "backpacks.yml"
         );
-
-        loadData();
+        this.data = YamlConfiguration.loadConfiguration(dataFile);
     }
 
     public void registerRecipe() {
@@ -124,6 +123,7 @@ public final class BackpackManager implements Listener {
         }
 
         backpackDisplays.clear();
+        visibleBackpacks.clear();
         saveAll();
     }
 
@@ -137,20 +137,17 @@ public final class BackpackManager implements Listener {
         );
         meta.lore(List.of(
                 lore("Right-click: Open backpack"),
-                lore("Sneak + Right-click: Wear / remove"),
-                lore("Other players can open it while worn"),
+                lore("Automatically worn while in your inventory"),
+                lore("Other players can open it from your back"),
                 Component.text(
                                 "Storage: 27 slots",
                                 NamedTextColor.DARK_GRAY
                         )
                         .decoration(TextDecoration.ITALIC, false)
         ));
-        meta.setItemModel(
-                new NamespacedKey(plugin, "backpack")
-        );
+        meta.setItemModel(new NamespacedKey(plugin, "backpack"));
         meta.setUnbreakable(true);
         meta.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);
-
         meta.getPersistentDataContainer().set(
                 kindKey,
                 PersistentDataType.STRING,
@@ -194,7 +191,6 @@ public final class BackpackManager implements Listener {
                 newId.toString()
         );
         backpack.setItemMeta(meta);
-
         return newId;
     }
 
@@ -203,9 +199,9 @@ public final class BackpackManager implements Listener {
             return null;
         }
 
-        PersistentDataContainer dataContainer = backpack.getItemMeta()
+        PersistentDataContainer container = backpack.getItemMeta()
                 .getPersistentDataContainer();
-        String rawId = dataContainer.get(
+        String rawId = container.get(
                 idKey,
                 PersistentDataType.STRING
         );
@@ -249,13 +245,7 @@ public final class BackpackManager implements Listener {
         }
 
         event.setCancelled(true);
-        UUID backpackId = ensureBackpackId(item);
-
-        if (player.isSneaking()) {
-            toggleWornBackpack(player, backpackId);
-        } else {
-            openBackpack(player, backpackId);
-        }
+        openBackpack(player, ensureBackpackId(item));
     }
 
     @EventHandler(
@@ -268,45 +258,16 @@ public final class BackpackManager implements Listener {
             return;
         }
 
-        UUID backpackId = wornBackpacks.get(wearer.getUniqueId());
+        ItemStack backpack = findBackpack(wearer);
 
-        if (backpackId == null) {
-            return;
-        }
-
-        if (findBackpack(wearer, backpackId) == null) {
-            clearWornBackpack(wearer, true);
+        if (backpack == null) {
             return;
         }
 
         event.setCancelled(true);
-        openBackpack(event.getPlayer(), backpackId);
-    }
-
-    private void toggleWornBackpack(Player player, UUID backpackId) {
-        UUID currentId = wornBackpacks.get(player.getUniqueId());
-
-        if (backpackId.equals(currentId)) {
-            clearWornBackpack(player, true);
-            player.sendActionBar(
-                    Component.text(
-                            "Backpack removed.",
-                            NamedTextColor.GRAY
-                    )
-            );
-            return;
-        }
-
-        wornBackpacks.put(player.getUniqueId(), backpackId);
-        removeDisplay(player.getUniqueId());
-        spawnDisplay(player);
-        saveWornState(player.getUniqueId(), backpackId);
-
-        player.sendActionBar(
-                Component.text(
-                        "Backpack equipped.",
-                        NamedTextColor.GREEN
-                )
+        openBackpack(
+                event.getPlayer(),
+                ensureBackpackId(backpack)
         );
     }
 
@@ -358,10 +319,8 @@ public final class BackpackManager implements Listener {
             return;
         }
 
-        ItemStack cursor = event.getCursor();
-        ItemStack current = event.getCurrentItem();
-
-        if (isBackpack(cursor) || isBackpack(current)) {
+        if (isBackpack(event.getCursor())
+                || isBackpack(event.getCurrentItem())) {
             event.setCancelled(true);
         }
     }
@@ -374,69 +333,78 @@ public final class BackpackManager implements Listener {
             return;
         }
 
-        boolean reachesBackpack = event.getRawSlots()
-                .stream()
-                .anyMatch(slot -> slot < BACKPACK_SIZE);
-
-        if (reachesBackpack) {
+        if (event.getRawSlots().stream()
+                .anyMatch(slot -> slot < BACKPACK_SIZE)) {
             event.setCancelled(true);
         }
     }
 
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onCraft(CraftItemEvent event) {
+        if (!(event.getRecipe() instanceof Keyed keyed)
+                || !keyed.getKey().equals(recipeKey)
+                || !(event.getWhoClicked() instanceof Player player)) {
+            return;
+        }
+
+        if (event.isShiftClick()
+                || findBackpack(player) != null
+                || isBackpack(event.getCursor())) {
+            event.setCancelled(true);
+            player.sendActionBar(
+                    Component.text(
+                            "You can only carry one backpack.",
+                            NamedTextColor.RED
+                    )
+            );
+        }
+    }
+
+    @EventHandler(
+            priority = EventPriority.HIGH,
+            ignoreCancelled = true
+    )
+    public void onPickup(EntityPickupItemEvent event) {
+        if (!(event.getEntity() instanceof Player player)
+                || !isBackpack(event.getItem().getItemStack())
+                || findBackpack(player) == null) {
+            return;
+        }
+
+        event.setCancelled(true);
+        player.sendActionBar(
+                Component.text(
+                        "You can only carry one backpack.",
+                        NamedTextColor.RED
+                )
+        );
+    }
+
     @EventHandler
     public void onDrop(PlayerDropItemEvent event) {
-        UUID droppedId = getBackpackId(
-                event.getItemDrop().getItemStack()
-        );
-        UUID wornId = wornBackpacks.get(
-                event.getPlayer().getUniqueId()
-        );
-
-        if (droppedId != null && droppedId.equals(wornId)) {
-            clearWornBackpack(event.getPlayer(), true);
+        if (isBackpack(event.getItemDrop().getItemStack())) {
+            hideBackpack(event.getPlayer().getUniqueId());
         }
     }
 
     @EventHandler
     public void onDeath(PlayerDeathEvent event) {
-        clearWornBackpack(event.getPlayer(), true);
+        hideBackpack(event.getPlayer().getUniqueId());
     }
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
-        Player player = event.getPlayer();
-        player.discoverRecipe(recipeKey);
-
-        Bukkit.getScheduler().runTaskLater(
-                plugin,
-                () -> restoreDisplay(player),
-                10L
-        );
+        event.getPlayer().discoverRecipe(recipeKey);
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        removeDisplay(event.getPlayer().getUniqueId());
+        hideBackpack(event.getPlayer().getUniqueId());
     }
 
-    private void restoreDisplay(Player player) {
-        UUID backpackId = wornBackpacks.get(player.getUniqueId());
-
-        if (backpackId == null) {
-            return;
-        }
-
-        if (findBackpack(player, backpackId) == null) {
-            clearWornBackpack(player, true);
-            return;
-        }
-
-        spawnDisplay(player);
-    }
-
-    private ItemStack findBackpack(Player player, UUID backpackId) {
+    private ItemStack findBackpack(Player player) {
         for (ItemStack item : player.getInventory().getContents()) {
-            if (backpackId.equals(getBackpackId(item))) {
+            if (isBackpack(item)) {
                 return item;
             }
         }
@@ -445,48 +413,68 @@ public final class BackpackManager implements Listener {
     }
 
     private void updateBackpackDisplays() {
-        validationTicks++;
-        boolean validateInventory = validationTicks >= 10;
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            ItemStack backpack = findBackpack(player);
 
-        if (validateInventory) {
-            validationTicks = 0;
-        }
-
-        boolean wornStateChanged = false;
-        Iterator<Map.Entry<UUID, UUID>> iterator =
-                wornBackpacks.entrySet().iterator();
-
-        while (iterator.hasNext()) {
-            Map.Entry<UUID, UUID> entry = iterator.next();
-            Player player = Bukkit.getPlayer(entry.getKey());
-
-            if (player == null || !player.isOnline()) {
+            if (backpack == null || player.isDead()) {
+                hideBackpack(player.getUniqueId());
                 continue;
             }
 
-            if (validateInventory
-                    && findBackpack(player, entry.getValue()) == null) {
-                iterator.remove();
-                removeDisplay(entry.getKey());
-                data.set("worn." + entry.getKey(), null);
-                wornStateChanged = true;
+            UUID backpackId = ensureBackpackId(backpack);
+            UUID visibleId = visibleBackpacks.get(player.getUniqueId());
+
+            if (!backpackId.equals(visibleId)) {
+                visibleBackpacks.put(player.getUniqueId(), backpackId);
+                spawnDisplay(player);
+            } else {
+                updateDisplay(player);
+            }
+
+            dropExtraBackpacks(player);
+        }
+    }
+
+    private void dropExtraBackpacks(Player player) {
+        ItemStack[] contents = player.getInventory().getContents();
+        boolean keptBackpack = false;
+        boolean droppedExtra = false;
+
+        for (int slot = 0; slot < contents.length; slot++) {
+            ItemStack item = contents[slot];
+
+            if (!isBackpack(item)) {
                 continue;
             }
 
-            updateDisplay(player);
+            if (!keptBackpack) {
+                keptBackpack = true;
+                continue;
+            }
+
+            player.getInventory().setItem(slot, null);
+            player.getWorld().dropItemNaturally(
+                    player.getLocation(),
+                    item
+            );
+            droppedExtra = true;
         }
 
-        if (wornStateChanged) {
-            saveDataFile();
+        if (droppedExtra) {
+            player.sendActionBar(
+                    Component.text(
+                            "You can only carry one backpack.",
+                            NamedTextColor.RED
+                    )
+            );
         }
     }
 
     private void spawnDisplay(Player player) {
         removeDisplay(player.getUniqueId());
 
-        Location location = backpackLocation(player);
         ItemDisplay display = player.getWorld().spawn(
-                location,
+                backpackLocation(player),
                 ItemDisplay.class
         );
 
@@ -541,27 +529,18 @@ public final class BackpackManager implements Listener {
         }
 
         double height = player.isSneaking() ? 1.0D : 1.18D;
-        Location backpackLocation = playerLocation.clone()
+        Location location = playerLocation.clone()
                 .add(forward.multiply(-0.31D))
                 .add(0.0D, height, 0.0D);
 
-        backpackLocation.setYaw(playerLocation.getYaw());
-        backpackLocation.setPitch(0.0F);
-        return backpackLocation;
+        location.setYaw(playerLocation.getYaw());
+        location.setPitch(0.0F);
+        return location;
     }
 
-    private void clearWornBackpack(
-            Player player,
-            boolean save
-    ) {
-        UUID playerId = player.getUniqueId();
-
-        wornBackpacks.remove(playerId);
+    private void hideBackpack(UUID playerId) {
+        visibleBackpacks.remove(playerId);
         removeDisplay(playerId);
-
-        if (save) {
-            saveWornState(playerId, null);
-        }
     }
 
     private void removeDisplay(UUID playerId) {
@@ -569,35 +548,6 @@ public final class BackpackManager implements Listener {
 
         if (display != null) {
             display.remove();
-        }
-    }
-
-    private void loadData() {
-        data = YamlConfiguration.loadConfiguration(dataFile);
-        ConfigurationSection wornSection =
-                data.getConfigurationSection("worn");
-
-        if (wornSection == null) {
-            return;
-        }
-
-        for (String rawPlayerId : wornSection.getKeys(false)) {
-            String rawBackpackId = wornSection.getString(rawPlayerId);
-
-            if (rawBackpackId == null) {
-                continue;
-            }
-
-            try {
-                wornBackpacks.put(
-                        UUID.fromString(rawPlayerId),
-                        UUID.fromString(rawBackpackId)
-                );
-            } catch (IllegalArgumentException ignored) {
-                plugin.getLogger().warning(
-                        "Ignored an invalid backpack UUID in backpacks.yml."
-                );
-            }
         }
     }
 
@@ -619,14 +569,6 @@ public final class BackpackManager implements Listener {
         saveDataFile();
     }
 
-    private void saveWornState(UUID playerId, UUID backpackId) {
-        data.set(
-                "worn." + playerId,
-                backpackId == null ? null : backpackId.toString()
-        );
-        saveDataFile();
-    }
-
     private void saveAll() {
         for (Map.Entry<UUID, Inventory> entry
                 : backpackInventories.entrySet()) {
@@ -643,15 +585,6 @@ public final class BackpackManager implements Listener {
                     data.set(basePath + "." + slot, item);
                 }
             }
-        }
-
-        data.set("worn", null);
-
-        for (Map.Entry<UUID, UUID> entry : wornBackpacks.entrySet()) {
-            data.set(
-                    "worn." + entry.getKey(),
-                    entry.getValue().toString()
-            );
         }
 
         saveDataFile();

@@ -29,8 +29,8 @@ Netherite Ingot.
 
 - 27 storage slots, matching a normal chest
 - Right-click the item to open it
-- Sneak and right-click to wear or remove it
-- A worn backpack is visible on the player's back
+- It is automatically visible on the player's back while carried
+- Each player can carry a maximum of one backpack
 - Other players can right-click the wearer to open it
 
 Craft a backpack with a chest in the center, leather on all four
