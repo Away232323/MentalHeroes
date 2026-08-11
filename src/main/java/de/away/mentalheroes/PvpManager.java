@@ -34,12 +34,12 @@ public final class PvpManager
     }
 
     public void start() {
-        applyWorldPvpState();
+        enableVanillaDamageHandling();
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onWorldLoad(WorldLoadEvent event) {
-        event.getWorld().setPVP(enabled);
+        event.getWorld().setPVP(true);
     }
 
     @EventHandler(
@@ -121,7 +121,7 @@ public final class PvpManager
         enabled = newState;
         plugin.getConfig().set("pvp.enabled", newState);
         plugin.saveConfig();
-        applyWorldPvpState();
+        enableVanillaDamageHandling();
 
         sender.sendMessage(Component.text(
                 newState
@@ -133,8 +133,8 @@ public final class PvpManager
         ));
     }
 
-    private void applyWorldPvpState() {
-        Bukkit.getWorlds().forEach(world -> world.setPVP(enabled));
+    private void enableVanillaDamageHandling() {
+        Bukkit.getWorlds().forEach(world -> world.setPVP(true));
     }
 
     private void sendStatus(CommandSender sender) {
