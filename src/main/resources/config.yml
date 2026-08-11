@@ -21,8 +21,6 @@ grappling-hook:
   maximum-pull-speed: 2.20
   base-pull-speed: 0.72
   pull-speed-per-block: 0.055
-  # Roughly two blocks of height when the hook attaches
-  attachment-upward-boost: 0.55
   vertical-boost: 0.22
   maximum-vertical-pull-speed: 1.80
 

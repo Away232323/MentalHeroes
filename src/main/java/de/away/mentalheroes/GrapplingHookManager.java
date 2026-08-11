@@ -264,7 +264,6 @@ public final class GrapplingHookManager implements Listener {
         Player player = Bukkit.getPlayer(owner);
 
         if (player != null) {
-            boostPlayerOnAttachment(player);
             player.getWorld().playSound(
                     player.getLocation(),
                     Sound.BLOCK_CHAIN_PLACE,
@@ -272,18 +271,6 @@ public final class GrapplingHookManager implements Listener {
                     1.25F
             );
         }
-    }
-
-    private void boostPlayerOnAttachment(Player player) {
-        double upwardBoost = plugin.getConfig().getDouble(
-                "grappling-hook.attachment-upward-boost",
-                0.55D
-        );
-        Vector velocity = player.getVelocity().clone();
-
-        velocity.setY(Math.max(velocity.getY(), upwardBoost));
-        player.setVelocity(velocity);
-        player.setFallDistance(0.0F);
     }
 
     private void spawnAnchorDisplay(HookSession session) {
