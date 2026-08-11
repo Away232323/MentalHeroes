@@ -6,10 +6,12 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.enchantments.EnchantmentOffer;
+import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.ThrownPotion;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -17,10 +19,14 @@ import org.bukkit.event.enchantment.EnchantItemEvent;
 import org.bukkit.event.enchantment.PrepareItemEnchantEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.entity.ItemSpawnEvent;
+import org.bukkit.event.entity.ProjectileLaunchEvent;
+import org.bukkit.event.inventory.BrewEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
+import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.inventory.PrepareSmithingEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerFishEvent;
@@ -32,8 +38,11 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.HashSet;
 import java.util.Set;
 
 public final class RestrictedEnchantmentManager implements Listener {
@@ -45,6 +54,9 @@ public final class RestrictedEnchantmentManager implements Listener {
             Enchantment.KNOCKBACK,
             Enchantment.THORNS
     );
+
+    private static final Set<Material> BLOCKED_MATERIALS =
+            createBlockedMaterials();
 
     private final MentalHeroesPlugin plugin;
     private BukkitTask cleanupTask;
@@ -165,6 +177,30 @@ public final class RestrictedEnchantmentManager implements Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
+    public void onPrepareCraft(PrepareItemCraftEvent event) {
+        if (shouldRemoveItem(event.getInventory().getResult())) {
+            event.getInventory().setResult(null);
+        }
+    }
+
+    @EventHandler(
+            priority = EventPriority.HIGHEST,
+            ignoreCancelled = true
+    )
+    public void onBrew(BrewEvent event) {
+        for (int slot = 0; slot < event.getResults().size(); slot++) {
+            ItemStack result = event.getResults().get(slot);
+
+            if (shouldRemoveItem(result)) {
+                event.getResults().set(
+                        slot,
+                        new ItemStack(Material.AIR)
+                );
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onItemPickup(EntityPickupItemEvent event) {
         if (shouldRemoveItem(event.getItem().getItemStack())) {
             event.setCancelled(true);
@@ -173,6 +209,35 @@ public final class RestrictedEnchantmentManager implements Listener {
         }
 
         sanitizeItem(event.getItem().getItemStack());
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onItemSpawn(ItemSpawnEvent event) {
+        if (shouldRemoveItem(event.getEntity().getItemStack())) {
+            event.setCancelled(true);
+            return;
+        }
+
+        sanitizeItem(event.getEntity().getItemStack());
+    }
+
+    @EventHandler(
+            priority = EventPriority.HIGHEST,
+            ignoreCancelled = true
+    )
+    public void onProjectileLaunch(ProjectileLaunchEvent event) {
+        ItemStack projectileItem = null;
+
+        if (event.getEntity() instanceof AbstractArrow arrow) {
+            projectileItem = arrow.getItemStack();
+        } else if (event.getEntity() instanceof ThrownPotion potion) {
+            projectileItem = potion.getItem();
+        }
+
+        if (shouldRemoveItem(projectileItem)) {
+            event.setCancelled(true);
+            event.getEntity().remove();
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -224,6 +289,12 @@ public final class RestrictedEnchantmentManager implements Listener {
                 }
 
                 sanitizeItem(item.getItemStack());
+            } else if (entity instanceof AbstractArrow arrow
+                    && shouldRemoveItem(arrow.getItemStack())) {
+                arrow.remove();
+            } else if (entity instanceof ThrownPotion potion
+                    && shouldRemoveItem(potion.getItem())) {
+                potion.remove();
             } else if (entity instanceof LivingEntity livingEntity
                     && !(livingEntity instanceof Player)) {
                 sanitizeEquipment(livingEntity.getEquipment());
@@ -315,7 +386,11 @@ public final class RestrictedEnchantmentManager implements Listener {
             return false;
         }
 
-        if (item.getType() == Material.ENCHANTED_GOLDEN_APPLE) {
+        if (BLOCKED_MATERIALS.contains(item.getType())) {
+            return true;
+        }
+
+        if (isBlockedPotion(item)) {
             return true;
         }
 
@@ -327,6 +402,75 @@ public final class RestrictedEnchantmentManager implements Listener {
 
         return BLOCKED_ENCHANTMENTS.stream()
                 .anyMatch(storageMeta::hasStoredEnchant);
+    }
+
+    private boolean isBlockedPotion(ItemStack item) {
+        Material type = item.getType();
+        boolean tippedArrow = type == Material.TIPPED_ARROW;
+        boolean healingPotion = type == Material.POTION
+                || type == Material.SPLASH_POTION
+                || type == Material.LINGERING_POTION;
+
+        if (!tippedArrow && !healingPotion) {
+            return false;
+        }
+
+        if (!(item.getItemMeta() instanceof PotionMeta potionMeta)) {
+            return false;
+        }
+
+        if (tippedArrow) {
+            return potionMeta.getAllEffects().stream().anyMatch(
+                    effect -> effect.getType()
+                            .equals(PotionEffectType.POISON)
+                            || effect.getType().equals(
+                            PotionEffectType.SLOWNESS
+                    )
+            );
+        }
+
+        return potionMeta.getAllEffects().stream().anyMatch(
+                effect -> effect.getType().equals(
+                        PotionEffectType.INSTANT_HEALTH
+                )
+        );
+    }
+
+    private static Set<Material> createBlockedMaterials() {
+        Set<Material> materials = new HashSet<>();
+        String[] names = {
+                "ENCHANTED_GOLDEN_APPLE",
+                "TRIAL_KEY",
+                "OMINOUS_TRIAL_KEY",
+                "OMINOUS_BOTTLE",
+                "HEAVY_CORE",
+                "MACE",
+                "BREEZE_ROD",
+                "WIND_CHARGE",
+                "FLOW_ARMOR_TRIM_SMITHING_TEMPLATE",
+                "BOLT_ARMOR_TRIM_SMITHING_TEMPLATE",
+                "FLOW_BANNER_PATTERN",
+                "GUSTER_BANNER_PATTERN",
+                "FLOW_POTTERY_SHERD",
+                "GUSTER_POTTERY_SHERD",
+                "SCRAPE_POTTERY_SHERD",
+                "MUSIC_DISC_CREATOR",
+                "MUSIC_DISC_CREATOR_MUSIC_BOX",
+                "MUSIC_DISC_PRECIPICE",
+                "BREEZE_SPAWN_EGG",
+                "TRIAL_SPAWNER",
+                "VAULT"
+        };
+
+        for (String name : names) {
+            Material material = Material.matchMaterial(name);
+
+            if (material != null) {
+                materials.add(material);
+            }
+        }
+
+        return Set.copyOf(materials);
     }
 
     private boolean sanitizeItem(ItemStack item) {

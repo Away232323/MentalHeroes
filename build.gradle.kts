@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "de.away.mentalheroes"
-version = "1.4.5"
+version = "1.5.0"
 
 repositories {
     mavenCentral()

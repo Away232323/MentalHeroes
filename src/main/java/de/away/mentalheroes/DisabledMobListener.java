@@ -59,6 +59,7 @@ public final class DisabledMobListener implements Listener {
     private boolean isDisabled(EntityType type) {
         return type == EntityType.PHANTOM
                 || type == EntityType.ENDERMITE
+                || type == EntityType.BREEZE
                 || type == EntityType.VILLAGER
                 || type == EntityType.WANDERING_TRADER
                 || type == EntityType.ZOMBIE_VILLAGER;

@@ -18,6 +18,7 @@ public final class MentalHeroesPlugin extends JavaPlugin {
     private PlaytimeManager playtimeManager;
     private RestrictedEnchantmentManager restrictedEnchantmentManager;
     private DimensionManager dimensionManager;
+    private TrialChamberManager trialChamberManager;
 
     @Override
     public void onEnable() {
@@ -51,6 +52,7 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         restrictedEnchantmentManager =
                 new RestrictedEnchantmentManager(this);
         dimensionManager = new DimensionManager(this);
+        trialChamberManager = new TrialChamberManager(this);
 
         DisabledMobListener disabledMobListener =
                 new DisabledMobListener();
@@ -78,6 +80,10 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 dimensionManager,
+                this
+        );
+        getServer().getPluginManager().registerEvents(
+                trialChamberManager,
                 this
         );
         getServer().getPluginManager().registerEvents(
@@ -160,6 +166,7 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         playtimeManager.start();
         restrictedEnchantmentManager.start();
         dimensionManager.start();
+        trialChamberManager.removeFromLoadedChunks();
         disabledMobListener.removeExistingMobs();
 
         getLogger().info("MentalHeroes has been enabled successfully!");
