@@ -106,6 +106,10 @@ public final class MentalHeroesPlugin extends JavaPlugin {
                 ),
                 this
         );
+        getServer().getPluginManager().registerEvents(
+                new AppleDropListener(this),
+                this
+        );
 
         MentalHeroesCommand commandHandler = new MentalHeroesCommand(
                 this,

@@ -38,6 +38,11 @@ playtime:
   daily-seconds: 3600
   reset-timezone: "Europe/Vienna"
 
+apple-drops:
+  # 10% base chance: about one extra apple per 10 broken leaves.
+  base-chance: 0.10
+  fortune-bonus-per-level: 0.015
+
 ban:
   reason: "<red><bold>You have lost all of your Hero Hearts!</bold></red>"
 

@@ -1,5 +1,5 @@
 name: MentalHeroes
-version: 1.4.3
+version: 1.4.4
 main: de.away.mentalheroes.MentalHeroesPlugin
 api-version: '1.21.6'
 author: Away
