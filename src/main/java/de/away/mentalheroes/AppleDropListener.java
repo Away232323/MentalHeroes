@@ -26,7 +26,8 @@ public final class AppleDropListener implements Listener {
             ignoreCancelled = true
     )
     public void onLeafBreak(BlockBreakEvent event) {
-        if (!event.isDropItems()
+        if (!plugin.isHeroesWorld(event.getPlayer())
+                || !event.isDropItems()
                 || !Tag.LEAVES.isTagged(event.getBlock().getType())
                 || event.getPlayer().getGameMode()
                 == GameMode.CREATIVE) {

@@ -21,7 +21,9 @@ import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -106,7 +108,9 @@ public final class BackpackManager implements Listener {
         );
 
         for (Player player : Bukkit.getOnlinePlayers()) {
-            player.discoverRecipe(recipeKey);
+            if (plugin.isHeroesWorld(player)) {
+                player.discoverRecipe(recipeKey);
+            }
         }
     }
 
@@ -234,6 +238,11 @@ public final class BackpackManager implements Listener {
         }
 
         Player player = event.getPlayer();
+
+        if (!plugin.isHeroesWorld(player)) {
+            return;
+        }
+
         ItemStack item = hand == EquipmentSlot.HAND
                 ? player.getInventory().getItemInMainHand()
                 : player.getInventory().getItemInOffHand();
@@ -252,7 +261,9 @@ public final class BackpackManager implements Listener {
     )
     public void onPlayerRightClick(PlayerInteractEntityEvent event) {
         if (event.getHand() != EquipmentSlot.HAND
-                || !(event.getRightClicked() instanceof Player wearer)) {
+                || !(event.getRightClicked() instanceof Player wearer)
+                || !plugin.isHeroesWorld(event.getPlayer())
+                || !plugin.isHeroesWorld(wearer)) {
             return;
         }
 
@@ -345,6 +356,11 @@ public final class BackpackManager implements Listener {
             return;
         }
 
+        if (!plugin.isHeroesWorld(player)) {
+            event.setCancelled(true);
+            return;
+        }
+
         if (event.isShiftClick()
                 || findBackpack(player) != null
                 || isBackpack(event.getCursor())) {
@@ -358,12 +374,26 @@ public final class BackpackManager implements Listener {
         }
     }
 
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onPrepareCraft(PrepareItemCraftEvent event) {
+        ItemStack result = event.getInventory().getResult();
+
+        if (isBackpack(result)
+                && event.getViewers().stream().noneMatch(
+                viewer -> viewer instanceof Player player
+                        && plugin.isHeroesWorld(player)
+        )) {
+            event.getInventory().setResult(null);
+        }
+    }
+
     @EventHandler(
             priority = EventPriority.HIGH,
             ignoreCancelled = true
     )
     public void onPickup(EntityPickupItemEvent event) {
         if (!(event.getEntity() instanceof Player player)
+                || !plugin.isHeroesWorld(player)
                 || !isBackpack(event.getItem().getItemStack())
                 || findBackpack(player) == null) {
             return;
@@ -392,7 +422,20 @@ public final class BackpackManager implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
-        event.getPlayer().discoverRecipe(recipeKey);
+        if (plugin.isHeroesWorld(event.getPlayer())) {
+            event.getPlayer().discoverRecipe(recipeKey);
+        }
+    }
+
+    @EventHandler
+    public void onWorldChange(PlayerChangedWorldEvent event) {
+        Player player = event.getPlayer();
+
+        if (plugin.isHeroesWorld(player)) {
+            player.discoverRecipe(recipeKey);
+        } else {
+            hideBackpack(player.getUniqueId());
+        }
     }
 
     @EventHandler
@@ -412,6 +455,11 @@ public final class BackpackManager implements Listener {
 
     private void updateBackpackDisplays() {
         for (Player player : Bukkit.getOnlinePlayers()) {
+            if (!plugin.isHeroesWorld(player)) {
+                hideBackpack(player.getUniqueId());
+                continue;
+            }
+
             ItemStack backpack = findBackpack(player);
 
             if (backpack == null || player.isDead()) {

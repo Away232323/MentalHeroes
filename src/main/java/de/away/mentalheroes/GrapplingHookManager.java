@@ -93,6 +93,10 @@ public final class GrapplingHookManager implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
+        if (!plugin.isHeroesWorld(event.getPlayer())) {
+            return;
+        }
+
         for (ItemStack item : event.getPlayer()
                 .getInventory().getContents()) {
             if (item != null) {
@@ -120,6 +124,10 @@ public final class GrapplingHookManager implements Listener {
         }
 
         Player player = event.getPlayer();
+
+        if (!plugin.isHeroesWorld(player)) {
+            return;
+        }
 
         if (hand != EquipmentSlot.HAND) {
             if (items.isHook(
@@ -300,6 +308,10 @@ public final class GrapplingHookManager implements Listener {
             ignoreCancelled = true
     )
     public void onPull(PlayerSwapHandItemsEvent event) {
+        if (!plugin.isHeroesWorld(event.getPlayer())) {
+            return;
+        }
+
         HookSession session = sessions.get(
                 event.getPlayer().getUniqueId()
         );
@@ -340,6 +352,10 @@ public final class GrapplingHookManager implements Listener {
             return;
         }
 
+        if (!plugin.isHeroesWorld(player)) {
+            return;
+        }
+
         if (event.getClick() == ClickType.SWAP_OFFHAND
                 && items.isHook(event.getCurrentItem())) {
             event.setCancelled(true);
@@ -364,7 +380,9 @@ public final class GrapplingHookManager implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onInventoryDrag(InventoryDragEvent event) {
-        if (!items.isHook(event.getOldCursor())) {
+        if (!(event.getWhoClicked() instanceof Player player)
+                || !plugin.isHeroesWorld(player)
+                || !items.isHook(event.getOldCursor())) {
             return;
         }
 
@@ -391,7 +409,8 @@ public final class GrapplingHookManager implements Listener {
 
             if (player == null
                     || !player.isOnline()
-                    || player.isDead()) {
+                    || player.isDead()
+                    || !plugin.isHeroesWorld(player)) {
                 removeEntities(session);
                 iterator.remove();
                 continue;
@@ -449,6 +468,10 @@ public final class GrapplingHookManager implements Listener {
 
     private void enforceNoOffhandHooks() {
         for (Player player : Bukkit.getOnlinePlayers()) {
+            if (!plugin.isHeroesWorld(player)) {
+                continue;
+            }
+
             ItemStack offhand = player.getInventory()
                     .getItemInOffHand();
 
@@ -690,7 +713,8 @@ public final class GrapplingHookManager implements Listener {
     )
     public void onFallDamage(EntityDamageEvent event) {
         if (event.getCause() != EntityDamageEvent.DamageCause.FALL
-                || !(event.getEntity() instanceof Player player)) {
+                || !(event.getEntity() instanceof Player player)
+                || !plugin.isHeroesWorld(player)) {
             return;
         }
 

@@ -27,11 +27,7 @@ public final class DimensionManager implements Listener {
     }
 
     public void start() {
-        Bukkit.getScheduler().runTaskLater(
-                plugin,
-                this::relocatePlayersAndUnloadDimensions,
-                1L
-        );
+        // Dimensions of other game modes must stay untouched.
     }
 
     @EventHandler(
@@ -39,7 +35,9 @@ public final class DimensionManager implements Listener {
             ignoreCancelled = false
     )
     public void onPortalCreate(PortalCreateEvent event) {
-        event.setCancelled(true);
+        if (plugin.isHeroesWorld(event.getWorld())) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler(
@@ -47,6 +45,9 @@ public final class DimensionManager implements Listener {
             ignoreCancelled = false
     )
     public void onPlayerPortal(PlayerPortalEvent event) {
+        if (!plugin.isHeroesWorld(event.getFrom().getWorld())) {
+            return;
+        }
         event.setCancelled(true);
         sendDisabledMessage(event.getPlayer());
     }
@@ -56,7 +57,9 @@ public final class DimensionManager implements Listener {
             ignoreCancelled = false
     )
     public void onEntityPortal(EntityPortalEvent event) {
-        event.setCancelled(true);
+        if (plugin.isHeroesWorld(event.getEntity().getWorld())) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler(
@@ -64,7 +67,8 @@ public final class DimensionManager implements Listener {
             ignoreCancelled = false
     )
     public void onPlayerTeleport(PlayerTeleportEvent event) {
-        if (isBlocked(event.getTo())) {
+        if (plugin.isHeroesWorld(event.getFrom().getWorld())
+                && isBlocked(event.getTo())) {
             event.setCancelled(true);
             sendDisabledMessage(event.getPlayer());
         }
@@ -75,14 +79,16 @@ public final class DimensionManager implements Listener {
             ignoreCancelled = false
     )
     public void onEntityTeleport(EntityTeleportEvent event) {
-        if (isBlocked(event.getTo())) {
+        if (plugin.isHeroesWorld(event.getFrom().getWorld())
+                && isBlocked(event.getTo())) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onRespawn(PlayerRespawnEvent event) {
-        if (!isBlocked(event.getRespawnLocation())) {
+        if (!plugin.isHeroesWorld(event.getPlayer())
+                || !isBlocked(event.getRespawnLocation())) {
             return;
         }
 
@@ -95,7 +101,8 @@ public final class DimensionManager implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onJoin(PlayerJoinEvent event) {
-        if (!isBlocked(event.getPlayer().getLocation())) {
+        if (!plugin.isHeroesWorld(event.getPlayer())
+                || !isBlocked(event.getPlayer().getLocation())) {
             return;
         }
 
@@ -107,15 +114,7 @@ public final class DimensionManager implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onWorldLoad(WorldLoadEvent event) {
-        if (!isBlocked(event.getWorld())) {
-            return;
-        }
-
-        Bukkit.getScheduler().runTaskLater(
-                plugin,
-                () -> unloadDimension(event.getWorld()),
-                1L
-        );
+        // Other worlds and their dimensions are intentionally untouched.
     }
 
     private void relocatePlayersAndUnloadDimensions() {

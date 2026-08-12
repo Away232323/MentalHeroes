@@ -46,7 +46,8 @@ public final class HeartLossAnimationManager implements Listener {
     ) {
         UUID uuid = player.getUniqueId();
 
-        if (!pendingAnimations.remove(uuid)
+        if (!plugin.isHeroesWorld(player)
+                || !pendingAnimations.remove(uuid)
                 || !animatingPlayers.add(uuid)) {
             return false;
         }
@@ -85,7 +86,9 @@ public final class HeartLossAnimationManager implements Listener {
             String frame,
             Title.Times times
     ) {
-        if (!player.isOnline() || !animatingPlayers.contains(uuid)) {
+        if (!player.isOnline()
+                || !plugin.isHeroesWorld(player)
+                || !animatingPlayers.contains(uuid)) {
             return;
         }
 
@@ -118,7 +121,7 @@ public final class HeartLossAnimationManager implements Listener {
 
         player.clearTitle();
 
-        if (!player.isOnline()) {
+        if (!player.isOnline() || !plugin.isHeroesWorld(player)) {
             pendingAnimations.add(uuid);
             return;
         }

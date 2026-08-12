@@ -14,7 +14,6 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
-import org.bukkit.event.server.ServerCommandEvent;
 import org.bukkit.event.world.AsyncStructureSpawnEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.generator.structure.GeneratedStructure;
@@ -29,9 +28,11 @@ import java.util.Locale;
 
 public final class TrialChamberManager implements Listener {
 
+    private final MentalHeroesPlugin plugin;
     private final NamespacedKey processedKey;
 
     public TrialChamberManager(MentalHeroesPlugin plugin) {
+        this.plugin = plugin;
         processedKey = new NamespacedKey(
                 plugin,
                 "trial_chamber_removed"
@@ -40,7 +41,7 @@ public final class TrialChamberManager implements Listener {
 
     public void removeFromLoadedChunks() {
         for (World world : Bukkit.getWorlds()) {
-            if (world.getEnvironment() != World.Environment.NORMAL) {
+            if (!plugin.isHeroesWorld(world)) {
                 continue;
             }
 
@@ -52,7 +53,9 @@ public final class TrialChamberManager implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onChunkLoad(ChunkLoadEvent event) {
-        removeTrialChamber(event.getChunk());
+        if (plugin.isHeroesWorld(event.getWorld())) {
+            removeTrialChamber(event.getChunk());
+        }
     }
 
     @EventHandler(
@@ -60,7 +63,8 @@ public final class TrialChamberManager implements Listener {
             ignoreCancelled = true
     )
     public void onStructureSpawn(AsyncStructureSpawnEvent event) {
-        if (event.getStructure().equals(Structure.TRIAL_CHAMBERS)) {
+        if (plugin.isHeroesWorld(event.getWorld())
+                && event.getStructure().equals(Structure.TRIAL_CHAMBERS)) {
             event.setCancelled(true);
         }
     }
@@ -70,6 +74,10 @@ public final class TrialChamberManager implements Listener {
             ignoreCancelled = true
     )
     public void onBlockPlace(BlockPlaceEvent event) {
+        if (!plugin.isHeroesWorld(event.getPlayer())) {
+            return;
+        }
+
         Material type = event.getBlockPlaced().getType();
 
         if (type != Material.TRIAL_SPAWNER
@@ -89,7 +97,8 @@ public final class TrialChamberManager implements Listener {
             ignoreCancelled = true
     )
     public void onPlayerCommand(PlayerCommandPreprocessEvent event) {
-        if (!isTrialStructureCommand(event.getMessage())) {
+        if (!plugin.isHeroesWorld(event.getPlayer())
+                || !isTrialStructureCommand(event.getMessage())) {
             return;
         }
 
@@ -100,24 +109,8 @@ public final class TrialChamberManager implements Listener {
         ));
     }
 
-    @EventHandler(
-            priority = EventPriority.HIGHEST,
-            ignoreCancelled = true
-    )
-    public void onServerCommand(ServerCommandEvent event) {
-        if (!isTrialStructureCommand(event.getCommand())) {
-            return;
-        }
-
-        event.setCancelled(true);
-        event.getSender().sendMessage(
-                "Trial Chambers are disabled."
-        );
-    }
-
     private void removeTrialChamber(Chunk chunk) {
-        if (chunk.getWorld().getEnvironment()
-                != World.Environment.NORMAL) {
+        if (!plugin.isHeroesWorld(chunk.getWorld())) {
             return;
         }
 

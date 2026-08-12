@@ -44,6 +44,11 @@ public final class CombatManager {
     }
 
     public void tag(Player firstPlayer, Player secondPlayer) {
+        if (!plugin.isHeroesWorld(firstPlayer)
+                || !plugin.isHeroesWorld(secondPlayer)) {
+            return;
+        }
+
         UUID firstUuid = firstPlayer.getUniqueId();
         UUID secondUuid = secondPlayer.getUniqueId();
 
@@ -108,6 +113,15 @@ public final class CombatManager {
         while (iterator.hasNext()) {
             Map.Entry<UUID, CombatState> entry = iterator.next();
             CombatState state = entry.getValue();
+
+            Player activePlayer = Bukkit.getPlayer(entry.getKey());
+            if (activePlayer == null
+                    || !activePlayer.isOnline()
+                    || !plugin.isHeroesWorld(activePlayer)) {
+                iterator.remove();
+                removeOpponentReferences(entry.getKey());
+                continue;
+            }
 
             state.remainingSeconds--;
 

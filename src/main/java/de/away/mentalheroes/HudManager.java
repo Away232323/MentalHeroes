@@ -55,6 +55,11 @@ public final class HudManager {
     }
 
     public void update(Player player) {
+        if (!plugin.isHeroesWorld(player)) {
+            player.sendActionBar(Component.empty());
+            return;
+        }
+
         int hearts = heartManager.getHearts(player.getUniqueId());
         Component heartDisplay = createHeartDisplay(hearts);
 

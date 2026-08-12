@@ -1,3 +1,6 @@
+heroes-world: "mentalheros"
+lobby-world: "lobby"
+
 combat:
   start-seconds: 30
   hits-per-extension: 5

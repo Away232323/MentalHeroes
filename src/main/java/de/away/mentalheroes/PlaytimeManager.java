@@ -18,6 +18,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitTask;
@@ -185,6 +186,11 @@ public final class PlaytimeManager
 
         if (enabled) {
             for (Player player : Bukkit.getOnlinePlayers()) {
+                if (!plugin.isHeroesWorld(player)) {
+                    hideBossBar(player);
+                    continue;
+                }
+
                 UUID uuid = player.getUniqueId();
                 int used = Math.min(
                         dailySeconds,
@@ -196,7 +202,7 @@ public final class PlaytimeManager
 
                 if (used >= dailySeconds) {
                     hideBossBar(player);
-                    player.kick(limitReachedMessage());
+                    moveToLobby(player);
                     continue;
                 }
 
@@ -215,15 +221,6 @@ public final class PlaytimeManager
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onLogin(PlayerLoginEvent event) {
         ensureDailyReset();
-
-        if (enabled && getRemainingSeconds(
-                event.getPlayer().getUniqueId()
-        ) <= 0) {
-            event.disallow(
-                    PlayerLoginEvent.Result.KICK_OTHER,
-                    limitReachedMessage()
-            );
-        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -240,8 +237,21 @@ public final class PlaytimeManager
         saveData();
     }
 
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onWorldChange(PlayerChangedWorldEvent event) {
+        Bukkit.getScheduler().runTask(
+                plugin,
+                () -> handleOnlinePlayer(event.getPlayer())
+        );
+    }
+
     private void handleOnlinePlayer(Player player) {
         if (!player.isOnline()) {
+            return;
+        }
+
+        if (!plugin.isHeroesWorld(player)) {
+            hideBossBar(player);
             return;
         }
 
@@ -253,7 +263,7 @@ public final class PlaytimeManager
         }
 
         if (getRemainingSeconds(player.getUniqueId()) <= 0) {
-            player.kick(limitReachedMessage());
+            moveToLobby(player);
             return;
         }
 
@@ -318,7 +328,9 @@ public final class PlaytimeManager
     private void updateBossBar(Player player) {
         UUID uuid = player.getUniqueId();
 
-        if (!enabled || hiddenBossBars.contains(uuid)) {
+        if (!plugin.isHeroesWorld(player)
+                || !enabled
+                || hiddenBossBars.contains(uuid)) {
             hideBossBar(player);
             return;
         }
@@ -391,6 +403,19 @@ public final class PlaytimeManager
                         + "You can play again after 00:00.",
                 NamedTextColor.RED
         );
+    }
+
+    private void moveToLobby(Player player) {
+        org.bukkit.World lobby = Bukkit.getWorld(
+                plugin.getConfig().getString("lobby-world", "lobby")
+        );
+
+        if (lobby != null) {
+            player.teleportAsync(lobby.getSpawnLocation());
+            player.sendMessage(limitReachedMessage());
+        } else {
+            player.kick(limitReachedMessage());
+        }
     }
 
     private void saveData() {

@@ -8,8 +8,12 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.enchantment.EnchantItemEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
+import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.inventory.PrepareSmithingEvent;
+import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.player.PlayerItemMendEvent;
+import org.bukkit.entity.HumanEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.SmithingInventory;
 import org.bukkit.inventory.meta.Damageable;
@@ -20,16 +24,26 @@ import java.util.Map;
 public final class GrapplingHookCraftingListener
         implements Listener {
 
+    private final MentalHeroesPlugin plugin;
     private final GrapplingHookItems items;
 
     public GrapplingHookCraftingListener(
+            MentalHeroesPlugin plugin,
             GrapplingHookItems items
     ) {
+        this.plugin = plugin;
         this.items = items;
     }
 
     @EventHandler
     public void onPrepareSmithing(PrepareSmithingEvent event) {
+        if (!hasHeroesViewer(event.getViewers())) {
+            if (items.isHook(event.getResult())) {
+                event.setResult(null);
+            }
+            return;
+        }
+
         SmithingInventory inventory = event.getInventory();
         ItemStack template = inventory.getItem(0);
         ItemStack base = inventory.getItem(1);
@@ -51,6 +65,30 @@ public final class GrapplingHookCraftingListener
 
         copyDurabilityAndUnbreaking(base, result);
         event.setResult(result);
+    }
+
+    @EventHandler
+    public void onPrepareCraft(PrepareItemCraftEvent event) {
+        ItemStack result = event.getInventory().getResult();
+
+        if (!hasHeroesViewer(event.getViewers())
+                && (items.isHook(result) || items.isHead(result))) {
+            event.getInventory().setResult(null);
+        }
+    }
+
+    @EventHandler
+    public void onCraft(CraftItemEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)
+                || plugin.isHeroesWorld(player)) {
+            return;
+        }
+
+        ItemStack result = event.getRecipe().getResult();
+
+        if (items.isHook(result) || items.isHead(result)) {
+            event.setCancelled(true);
+        }
     }
 
     private void copyDurabilityAndUnbreaking(
@@ -97,7 +135,8 @@ public final class GrapplingHookCraftingListener
 
     @EventHandler
     public void onEnchant(EnchantItemEvent event) {
-        if (!items.isHook(event.getItem())) {
+        if (!plugin.isHeroesWorld(event.getEnchanter())
+                || !items.isHook(event.getItem())) {
             return;
         }
 
@@ -132,6 +171,10 @@ public final class GrapplingHookCraftingListener
 
     @EventHandler
     public void onPrepareAnvil(PrepareAnvilEvent event) {
+        if (!hasHeroesViewer(event.getViewers())) {
+            return;
+        }
+
         ItemStack result = event.getResult();
 
         if (!items.isHook(result)) {
@@ -154,8 +197,18 @@ public final class GrapplingHookCraftingListener
 
     @EventHandler
     public void onMend(PlayerItemMendEvent event) {
-        if (items.isHook(event.getItem())) {
+        if (plugin.isHeroesWorld(event.getPlayer())
+                && items.isHook(event.getItem())) {
             event.setCancelled(true);
         }
+    }
+
+    private boolean hasHeroesViewer(
+            java.util.List<HumanEntity> viewers
+    ) {
+        return viewers.stream().anyMatch(
+                viewer -> viewer instanceof Player player
+                        && plugin.isHeroesWorld(player)
+        );
     }
 }

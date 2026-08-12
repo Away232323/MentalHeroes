@@ -164,6 +164,11 @@ public final class CarryManager implements Listener {
         }
 
         Player player = event.getPlayer();
+
+        if (!plugin.isHeroesWorld(player)) {
+            return;
+        }
+
         CarrySession current = sessions.get(player.getUniqueId());
 
         if (current != null) {
@@ -205,6 +210,10 @@ public final class CarryManager implements Listener {
         }
 
         Player player = event.getPlayer();
+
+        if (!plugin.isHeroesWorld(player)) {
+            return;
+        }
 
         if (sessions.containsKey(player.getUniqueId())) {
             event.setCancelled(true);
@@ -543,6 +552,11 @@ public final class CarryManager implements Listener {
 
             if (player == null || !player.isOnline()) {
                 releaseAt(entry.getKey(), session.fallbackLocation());
+                continue;
+            }
+
+            if (!plugin.isHeroesWorld(player)) {
+                releaseAt(entry.getKey(), player.getLocation());
                 continue;
             }
 

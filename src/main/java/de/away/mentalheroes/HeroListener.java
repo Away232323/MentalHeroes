@@ -2,7 +2,6 @@ package de.away.mentalheroes;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.EnderCrystal;
@@ -17,11 +16,11 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.projectiles.ProjectileSource;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -54,6 +53,10 @@ public final class HeroListener implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
+        if (!plugin.isHeroesWorld(player)) {
+            return;
+        }
+
         int hearts = heartManager.getHearts(player.getUniqueId());
 
         if (hearts <= 0) {
@@ -73,6 +76,10 @@ public final class HeroListener implements Listener {
             ignoreCancelled = true
     )
     public void onPlayerDamage(EntityDamageByEntityEvent event) {
+        if (!plugin.isHeroesWorld(event.getEntity().getWorld())) {
+            return;
+        }
+
         // Remember who destroyed an end crystal for its explosion damage.
         if (event.getEntity() instanceof EnderCrystal crystal) {
             Player crystalAttacker = findResponsiblePlayer(
@@ -128,6 +135,10 @@ public final class HeroListener implements Listener {
     )
     public void onDeath(PlayerDeathEvent event) {
         Player player = event.getPlayer();
+        if (!plugin.isHeroesWorld(player)) {
+            return;
+        }
+
         UUID uuid = player.getUniqueId();
 
         if (!combatManager.isInCombat(uuid)) {
@@ -179,6 +190,10 @@ public final class HeroListener implements Listener {
     @EventHandler
     public void onRespawn(PlayerRespawnEvent event) {
         Player player = event.getPlayer();
+
+        if (!plugin.isHeroesWorld(event.getRespawnLocation().getWorld())) {
+            return;
+        }
 
         Bukkit.getScheduler().runTaskLater(
                 plugin,
@@ -246,6 +261,29 @@ public final class HeroListener implements Listener {
         }
     }
 
+    @EventHandler
+    public void onWorldChange(PlayerChangedWorldEvent event) {
+        Player player = event.getPlayer();
+        UUID uuid = player.getUniqueId();
+
+        if (!plugin.isHeroesWorld(player)) {
+            combatManager.clear(uuid);
+            player.sendActionBar(Component.empty());
+            return;
+        }
+
+        if (heartManager.getHearts(uuid) <= 0) {
+            banPlayer(player);
+            return;
+        }
+
+        Bukkit.getScheduler().runTaskLater(
+                plugin,
+                () -> hudManager.update(player),
+                5L
+        );
+    }
+
     private Player findResponsiblePlayer(Entity damager) {
         if (damager instanceof Player player) {
             return player;
@@ -291,20 +329,19 @@ public final class HeroListener implements Listener {
         Component reasonComponent =
                 miniMessage.deserialize(rawReason);
 
-        String plainReason =
-                PlainTextComponentSerializer.plainText()
-                        .serialize(reasonComponent);
-
-        player.ban(
-                plainReason,
-                (Date) null,
-                "MentalHeroes"
-        );
-
         Player onlinePlayer = player.getPlayer();
 
         if (onlinePlayer != null && onlinePlayer.isOnline()) {
-            onlinePlayer.kick(reasonComponent);
+            org.bukkit.World lobby = Bukkit.getWorld(
+                    plugin.getConfig().getString("lobby-world", "lobby")
+            );
+
+            if (lobby != null) {
+                onlinePlayer.teleportAsync(lobby.getSpawnLocation());
+                onlinePlayer.sendMessage(reasonComponent);
+            } else {
+                onlinePlayer.kick(reasonComponent);
+            }
         }
     }
 

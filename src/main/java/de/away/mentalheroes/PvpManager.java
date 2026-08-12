@@ -39,7 +39,9 @@ public final class PvpManager
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onWorldLoad(WorldLoadEvent event) {
-        event.getWorld().setPVP(true);
+        if (plugin.isHeroesWorld(event.getWorld())) {
+            event.getWorld().setPVP(true);
+        }
     }
 
     @EventHandler(
@@ -47,7 +49,9 @@ public final class PvpManager
             ignoreCancelled = true
     )
     public void onPlayerDamage(EntityDamageByEntityEvent event) {
-        if (enabled || !(event.getEntity() instanceof Player victim)) {
+        if (enabled
+                || !plugin.isHeroesWorld(event.getEntity().getWorld())
+                || !(event.getEntity() instanceof Player victim)) {
             return;
         }
 
@@ -134,7 +138,9 @@ public final class PvpManager
     }
 
     private void enableVanillaDamageHandling() {
-        Bukkit.getWorlds().forEach(world -> world.setPVP(true));
+        Bukkit.getWorlds().stream()
+                .filter(plugin::isHeroesWorld)
+                .forEach(world -> world.setPVP(true));
     }
 
     private void sendStatus(CommandSender sender) {

@@ -13,12 +13,19 @@ import org.bukkit.event.world.ChunkLoadEvent;
 
 public final class DisabledMobListener implements Listener {
 
+    private final MentalHeroesPlugin plugin;
+
+    public DisabledMobListener(MentalHeroesPlugin plugin) {
+        this.plugin = plugin;
+    }
+
     @EventHandler(
             priority = EventPriority.HIGHEST,
             ignoreCancelled = false
     )
     public void onCreatureSpawn(CreatureSpawnEvent event) {
-        if (!isDisabled(event.getEntityType())) {
+        if (!plugin.isHeroesWorld(event.getLocation().getWorld())
+                || !isDisabled(event.getEntityType())) {
             return;
         }
 
@@ -28,6 +35,10 @@ public final class DisabledMobListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onChunkLoad(ChunkLoadEvent event) {
+        if (!plugin.isHeroesWorld(event.getWorld())) {
+            return;
+        }
+
         for (Entity entity : event.getChunk().getEntities()) {
             if (isDisabled(entity.getType())) {
                 entity.remove();
@@ -40,7 +51,8 @@ public final class DisabledMobListener implements Listener {
             ignoreCancelled = false
     )
     public void onEntityTransform(EntityTransformEvent event) {
-        if (event.getTransformedEntities().stream()
+        if (plugin.isHeroesWorld(event.getEntity().getWorld())
+                && event.getTransformedEntities().stream()
                 .anyMatch(entity -> isDisabled(entity.getType()))) {
             event.setCancelled(true);
         }
@@ -48,6 +60,9 @@ public final class DisabledMobListener implements Listener {
 
     public void removeExistingMobs() {
         for (World world : Bukkit.getWorlds()) {
+            if (!plugin.isHeroesWorld(world)) {
+                continue;
+            }
             for (Entity entity : world.getEntities()) {
                 if (isDisabled(entity.getType())) {
                     entity.remove();

@@ -83,6 +83,10 @@ public final class RestrictedEnchantmentManager implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPrepareEnchant(PrepareItemEnchantEvent event) {
+        if (!plugin.isHeroesWorld(event.getEnchanter())) {
+            return;
+        }
+
         EnchantmentOffer[] offers = event.getOffers();
 
         for (int slot = 0; slot < offers.length; slot++) {
@@ -102,6 +106,10 @@ public final class RestrictedEnchantmentManager implements Listener {
             ignoreCancelled = true
     )
     public void onEnchant(EnchantItemEvent event) {
+        if (!plugin.isHeroesWorld(event.getEnchanter())) {
+            return;
+        }
+
         event.getEnchantsToAdd().keySet().removeIf(
                 BLOCKED_ENCHANTMENTS::contains
         );
@@ -117,6 +125,12 @@ public final class RestrictedEnchantmentManager implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onLootGenerate(LootGenerateEvent event) {
+        if (!plugin.isHeroesWorld(
+                event.getLootContext().getLocation().getWorld()
+        )) {
+            return;
+        }
+
         event.getLoot().removeIf(this::shouldRemoveItem);
 
         for (ItemStack item : event.getLoot()) {
@@ -126,30 +140,50 @@ public final class RestrictedEnchantmentManager implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onInventoryOpen(InventoryOpenEvent event) {
+        if (!(event.getPlayer() instanceof Player player)
+                || !plugin.isHeroesWorld(player)) {
+            return;
+        }
+
         Bukkit.getScheduler().runTask(
                 plugin,
                 () -> {
-                    sanitizeInventory(event.getInventory());
-
-                    if (event.getPlayer() instanceof Player player) {
-                        sanitizePlayer(player);
+                    if (!plugin.isHeroesWorld(player)) {
+                        return;
                     }
+
+                    sanitizeInventory(event.getInventory());
+                    sanitizePlayer(player);
                 }
         );
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)
+                || !plugin.isHeroesWorld(player)) {
+            return;
+        }
+
         scheduleInventoryCleanup(event.getView().getTopInventory());
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onInventoryDrag(InventoryDragEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)
+                || !plugin.isHeroesWorld(player)) {
+            return;
+        }
+
         scheduleInventoryCleanup(event.getView().getTopInventory());
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPrepareAnvil(PrepareAnvilEvent event) {
+        if (!isHeroesInventory(event.getInventory())) {
+            return;
+        }
+
         ItemStack result = event.getResult();
 
         if (shouldRemoveItem(result)) {
@@ -164,6 +198,10 @@ public final class RestrictedEnchantmentManager implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPrepareSmithing(PrepareSmithingEvent event) {
+        if (!isHeroesInventory(event.getInventory())) {
+            return;
+        }
+
         ItemStack result = event.getResult();
 
         if (shouldRemoveItem(result)) {
@@ -178,6 +216,10 @@ public final class RestrictedEnchantmentManager implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPrepareCraft(PrepareItemCraftEvent event) {
+        if (!isHeroesInventory(event.getInventory())) {
+            return;
+        }
+
         if (shouldRemoveItem(event.getInventory().getResult())) {
             event.getInventory().setResult(null);
         }
@@ -188,6 +230,10 @@ public final class RestrictedEnchantmentManager implements Listener {
             ignoreCancelled = true
     )
     public void onBrew(BrewEvent event) {
+        if (!plugin.isHeroesWorld(event.getBlock().getWorld())) {
+            return;
+        }
+
         for (int slot = 0; slot < event.getResults().size(); slot++) {
             ItemStack result = event.getResults().get(slot);
 
@@ -202,6 +248,10 @@ public final class RestrictedEnchantmentManager implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onItemPickup(EntityPickupItemEvent event) {
+        if (!plugin.isHeroesWorld(event.getEntity().getWorld())) {
+            return;
+        }
+
         if (shouldRemoveItem(event.getItem().getItemStack())) {
             event.setCancelled(true);
             event.getItem().remove();
@@ -213,6 +263,10 @@ public final class RestrictedEnchantmentManager implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onItemSpawn(ItemSpawnEvent event) {
+        if (!plugin.isHeroesWorld(event.getEntity().getWorld())) {
+            return;
+        }
+
         if (shouldRemoveItem(event.getEntity().getItemStack())) {
             event.setCancelled(true);
             return;
@@ -226,6 +280,10 @@ public final class RestrictedEnchantmentManager implements Listener {
             ignoreCancelled = true
     )
     public void onProjectileLaunch(ProjectileLaunchEvent event) {
+        if (!plugin.isHeroesWorld(event.getEntity().getWorld())) {
+            return;
+        }
+
         ItemStack projectileItem = null;
 
         if (event.getEntity() instanceof AbstractArrow arrow) {
@@ -242,6 +300,10 @@ public final class RestrictedEnchantmentManager implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onItemDrop(PlayerDropItemEvent event) {
+        if (!plugin.isHeroesWorld(event.getPlayer())) {
+            return;
+        }
+
         if (shouldRemoveItem(event.getItemDrop().getItemStack())) {
             event.getItemDrop().remove();
             return;
@@ -252,6 +314,10 @@ public final class RestrictedEnchantmentManager implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onFishing(PlayerFishEvent event) {
+        if (!plugin.isHeroesWorld(event.getPlayer())) {
+            return;
+        }
+
         if (event.getCaught() instanceof Item item) {
             if (shouldRemoveItem(item.getItemStack())) {
                 item.remove();
@@ -264,6 +330,10 @@ public final class RestrictedEnchantmentManager implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onEntityDeath(EntityDeathEvent event) {
+        if (!plugin.isHeroesWorld(event.getEntity().getWorld())) {
+            return;
+        }
+
         event.getDrops().removeIf(this::shouldRemoveItem);
 
         for (ItemStack item : event.getDrops()) {
@@ -273,6 +343,10 @@ public final class RestrictedEnchantmentManager implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerJoin(PlayerJoinEvent event) {
+        if (!plugin.isHeroesWorld(event.getPlayer())) {
+            return;
+        }
+
         Bukkit.getScheduler().runTask(
                 plugin,
                 () -> sanitizePlayer(event.getPlayer())
@@ -281,6 +355,10 @@ public final class RestrictedEnchantmentManager implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onChunkLoad(ChunkLoadEvent event) {
+        if (!plugin.isHeroesWorld(event.getWorld())) {
+            return;
+        }
+
         for (Entity entity : event.getChunk().getEntities()) {
             if (entity instanceof Item item) {
                 if (shouldRemoveItem(item.getItemStack())) {
@@ -309,7 +387,8 @@ public final class RestrictedEnchantmentManager implements Listener {
                     sanitizeInventory(inventory);
 
                     for (Player player : Bukkit.getOnlinePlayers()) {
-                        if (player.getOpenInventory().getTopInventory()
+                        if (plugin.isHeroesWorld(player)
+                                && player.getOpenInventory().getTopInventory()
                                 .equals(inventory)) {
                             sanitizePlayer(player);
                         }
@@ -320,11 +399,22 @@ public final class RestrictedEnchantmentManager implements Listener {
 
     private void sanitizeOnlinePlayers() {
         for (Player player : Bukkit.getOnlinePlayers()) {
+            if (!plugin.isHeroesWorld(player)) {
+                continue;
+            }
+
             sanitizePlayer(player);
             sanitizeInventory(
                     player.getOpenInventory().getTopInventory()
             );
         }
+    }
+
+    private boolean isHeroesInventory(Inventory inventory) {
+        return inventory.getViewers().stream().anyMatch(
+                viewer -> viewer instanceof Player player
+                        && plugin.isHeroesWorld(player)
+        );
     }
 
     private void sanitizePlayer(Player player) {

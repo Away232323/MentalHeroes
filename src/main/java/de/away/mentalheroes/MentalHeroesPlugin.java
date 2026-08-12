@@ -1,6 +1,8 @@
 package de.away.mentalheroes;
 
 import org.bukkit.command.PluginCommand;
+import org.bukkit.World;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Map;
@@ -55,7 +57,7 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         trialChamberManager = new TrialChamberManager(this);
 
         DisabledMobListener disabledMobListener =
-                new DisabledMobListener();
+                new DisabledMobListener(this);
 
         HeroListener heroListener = new HeroListener(
                 this,
@@ -108,6 +110,7 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new GrapplingHookCraftingListener(
+                        this,
                         grapplingHookItems
                 ),
                 this
@@ -211,6 +214,16 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         }
 
         getLogger().info("MentalHeroes has been disabled.");
+    }
+
+    public boolean isHeroesWorld(World world) {
+        return world != null && world.getName().equalsIgnoreCase(
+                getConfig().getString("heroes-world", "mentalheros")
+        );
+    }
+
+    public boolean isHeroesWorld(Player player) {
+        return player != null && isHeroesWorld(player.getWorld());
     }
 
     private void migrateEnglishMessages() {

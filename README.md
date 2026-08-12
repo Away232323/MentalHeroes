@@ -1,5 +1,10 @@
 # MentalHeroes
 
+Alle Spielmechaniken dieses Plugins wirken ausschließlich in der in
+`config.yml` eingestellten Welt `heroes-world` (standardmäßig
+`mentalheros`). Beim Erreichen von 0 Herzen oder des täglichen Zeitlimits
+wird der Spieler in die Welt `lobby-world` geschickt.
+
 Paper plugin for Minecraft 1.21.6 with Hero Hearts, a combat
 system, grappling hooks, and wearable backpacks.
 
