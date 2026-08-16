@@ -51,6 +51,8 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         carryManager = new CarryManager(this);
 
         pvpManager = new PvpManager(this);
+        DamageCompatibilityManager damageCompatibilityManager =
+                new DamageCompatibilityManager(this);
         playtimeManager = new PlaytimeManager(this);
         restrictedEnchantmentManager =
                 new RestrictedEnchantmentManager(this);
@@ -74,6 +76,10 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(heroListener, this);
         getServer().getPluginManager().registerEvents(
                 pvpManager,
+                this
+        );
+        getServer().getPluginManager().registerEvents(
+                damageCompatibilityManager,
                 this
         );
         getServer().getPluginManager().registerEvents(
@@ -178,6 +184,7 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         backpackManager.start();
         carryManager.start();
         pvpManager.start();
+        damageCompatibilityManager.start();
         playtimeManager.start();
         restrictedEnchantmentManager.start();
         dimensionManager.start();
