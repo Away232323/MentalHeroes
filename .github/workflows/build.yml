@@ -31,22 +31,37 @@ jobs:
       - name: Plugin bauen
         run: gradle clean build --no-daemon
 
+      - name: Version und Dateinamen ermitteln
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          HERO_JAR=$(find build/libs -maxdepth 1 -type f -name 'MentalHeroes-*.jar' | head -n1)
+          test -n "$HERO_JAR"
+          HERO_FILE=$(basename "$HERO_JAR")
+          HERO_VERSION=${HERO_FILE#MentalHeroes-}
+          HERO_VERSION=${HERO_VERSION%.jar}
+          echo "jar=$HERO_JAR" >> "$GITHUB_OUTPUT"
+          echo "file=$HERO_FILE" >> "$GITHUB_OUTPUT"
+          echo "version=$HERO_VERSION" >> "$GITHUB_OUTPUT"
+          echo "resourcepack=MentalHeroes-Resourcepack-$HERO_VERSION.zip" >> "$GITHUB_OUTPUT"
+
       - name: Resourcepack bauen
         working-directory: resourcepack
-        run: zip -r ../MentalHeroes-Resourcepack.zip .
+        run: zip -r "../${{ steps.version.outputs.resourcepack }}" .
 
       - name: Plugin speichern
         uses: actions/upload-artifact@v4
         with:
-          name: MentalHeroes-Plugin
-          path: build/libs/MentalHeroes-*.jar
+          name: MentalHeroes-${{ steps.version.outputs.version }}
+          path: ${{ steps.version.outputs.jar }}
           if-no-files-found: error
 
       - name: Resourcepack speichern
         uses: actions/upload-artifact@v4
         with:
-          name: MentalHeroes-Resourcepack
-          path: MentalHeroes-Resourcepack.zip
+          name: MentalHeroes-Resourcepack-${{ steps.version.outputs.version }}
+          path: ${{ steps.version.outputs.resourcepack }}
           if-no-files-found: error
 
       - name: Direkten MentalHeroes Download aktualisieren
@@ -55,17 +70,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          HERO_JAR=$(find build/libs -maxdepth 1 -type f -name 'MentalHeroes-*.jar' | head -n1)
-          test -n "$HERO_JAR"
-          cp "$HERO_JAR" MentalHeroes.jar
-
           gh release delete mentalheroes-latest --yes --cleanup-tag >/dev/null 2>&1 || true
           gh release create mentalheroes-latest \
-            MentalHeroes.jar \
-            MentalHeroes-Resourcepack.zip \
+            "${{ steps.version.outputs.jar }}" \
+            "${{ steps.version.outputs.resourcepack }}" \
             --target "$GITHUB_SHA" \
-            --title "MentalHeroes Latest Build" \
-            --notes "Automatisch gebauter aktueller MentalHeroes Download." \
+            --title "MentalHeroes ${{ steps.version.outputs.version }}" \
+            --notes "Automatically built current MentalHeroes download." \
             --latest
 
       - name: Download im Summary anzeigen
@@ -74,6 +85,6 @@ jobs:
           {
             echo "# ✅ MentalHeroes Downloads"
             echo ""
-            echo "- [⬇️ MentalHeroes](https://github.com/${GITHUB_REPOSITORY}/releases/download/mentalheroes-latest/MentalHeroes.jar)"
-            echo "- [⬇️ MentalHeroes Resourcepack](https://github.com/${GITHUB_REPOSITORY}/releases/download/mentalheroes-latest/MentalHeroes-Resourcepack.zip)"
+            echo "- [⬇️ MentalHeroes ${{ steps.version.outputs.version }}](https://github.com/${GITHUB_REPOSITORY}/releases/download/mentalheroes-latest/${{ steps.version.outputs.file }})"
+            echo "- [⬇️ MentalHeroes Resourcepack ${{ steps.version.outputs.version }}](https://github.com/${GITHUB_REPOSITORY}/releases/download/mentalheroes-latest/${{ steps.version.outputs.resourcepack }})"
           } >> "$GITHUB_STEP_SUMMARY"
