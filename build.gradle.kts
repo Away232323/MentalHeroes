@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "de.away.mentalheroes"
-version = "1.7.0"
+version = "1.7.1"
 
 repositories {
     mavenCentral()
@@ -25,4 +25,10 @@ java {
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
     options.release.set(21)
+}
+
+tasks.processResources {
+    filesMatching("plugin.yml") {
+        expand("version" to project.version)
+    }
 }
