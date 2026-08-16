@@ -19,6 +19,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Global PvP switch for the MentalHeroes world only.
+ *
+ * <p>The world itself always keeps vanilla PvP enabled. This listener then
+ * decides whether player-vs-player damage is allowed. Using MONITOR here is
+ * deliberate: older server protection listeners could cancel the hit after
+ * /pvp on, which made the command say ON while no damage was dealt. This is the
+ * final MentalHeroes authority for player-vs-player damage in its own world.</p>
+ *
+ * <p>Mob/environment damage is never touched by this manager, so /pvp off only
+ * disables PvP and does not make players immune to monsters.</p>
+ */
 public final class PvpManager
         implements Listener, CommandExecutor, TabCompleter {
 
@@ -45,26 +57,24 @@ public final class PvpManager
     }
 
     @EventHandler(
-            priority = EventPriority.LOWEST,
-            ignoreCancelled = true
+            priority = EventPriority.MONITOR,
+            ignoreCancelled = false
     )
     public void onPlayerDamage(EntityDamageByEntityEvent event) {
-        if (enabled
-                || !plugin.isHeroesWorld(event.getEntity().getWorld())
+        if (!plugin.isHeroesWorld(event.getEntity().getWorld())
                 || !(event.getEntity() instanceof Player victim)) {
             return;
         }
 
         Player attacker = findAttacker(event);
-
         if (attacker == null
-                || attacker.getUniqueId().equals(
-                        victim.getUniqueId()
-                )) {
+                || attacker.getUniqueId().equals(victim.getUniqueId())) {
             return;
         }
 
-        event.setCancelled(true);
+        // Final authority for PvP inside MentalHeroes. This fixes the case where
+        // another protection listener already cancelled the hit before us.
+        event.setCancelled(!enabled);
     }
 
     private Player findAttacker(EntityDamageByEntityEvent event) {
