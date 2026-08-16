@@ -1,9 +1,9 @@
 name: MentalHeroes
-version: 1.6.0
+version: '${version}'
 main: de.away.mentalheroes.MentalHeroesPlugin
 api-version: '1.21.6'
 author: Away
-description: Hero hearts, combat, and grappling hooks for Paper 1.21.6
+description: Hero hearts, combat, graves, and grappling hooks for Paper 1.21.6
 
 commands:
   mentalheroes:
