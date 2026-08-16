@@ -21,6 +21,7 @@ public final class MentalHeroesPlugin extends JavaPlugin {
     private RestrictedEnchantmentManager restrictedEnchantmentManager;
     private DimensionManager dimensionManager;
     private TrialChamberManager trialChamberManager;
+    private GraveManager graveManager;
 
     @Override
     public void onEnable() {
@@ -55,6 +56,7 @@ public final class MentalHeroesPlugin extends JavaPlugin {
                 new RestrictedEnchantmentManager(this);
         dimensionManager = new DimensionManager(this);
         trialChamberManager = new TrialChamberManager(this);
+        graveManager = new GraveManager(this);
 
         DisabledMobListener disabledMobListener =
                 new DisabledMobListener(this);
@@ -86,6 +88,10 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 trialChamberManager,
+                this
+        );
+        getServer().getPluginManager().registerEvents(
+                graveManager,
                 this
         );
         getServer().getPluginManager().registerEvents(
@@ -169,6 +175,7 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         playtimeManager.start();
         restrictedEnchantmentManager.start();
         dimensionManager.start();
+        graveManager.start();
         trialChamberManager.removeFromLoadedChunks();
         disabledMobListener.removeExistingMobs();
 
@@ -177,6 +184,10 @@ public final class MentalHeroesPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (graveManager != null) {
+            graveManager.stop();
+        }
+
         if (combatManager != null) {
             combatManager.stop();
         }
