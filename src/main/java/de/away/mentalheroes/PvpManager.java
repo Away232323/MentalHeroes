@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
+import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.world.WorldLoadEvent;
@@ -22,11 +23,9 @@ import java.util.Locale;
 /**
  * Global PvP switch for the MentalHeroes world only.
  *
- * <p>The world itself always keeps vanilla PvP enabled. This listener then
- * decides whether player-vs-player damage is allowed. Using MONITOR here is
- * deliberate: older server protection listeners could cancel the hit after
- * /pvp on, which made the command say ON while no damage was dealt. This is the
- * final MentalHeroes authority for player-vs-player damage in its own world.</p>
+ * <p>The world itself always keeps vanilla PvP enabled. This listener is
+ * deliberately registered again after server startup so its MONITOR handler
+ * runs after protection listeners that may otherwise cancel PvP afterwards.</p>
  *
  * <p>Mob/environment damage is never touched by this manager, so /pvp off only
  * disables PvP and does not make players immune to monsters.</p>
@@ -46,6 +45,21 @@ public final class PvpManager
     }
 
     public void start() {
+        enableVanillaDamageHandling();
+
+        // onEnable can run before protection plugins have finished registering
+        // their listeners. Re-register this listener afterwards so the MONITOR
+        // handler below is the last authority for Heroes PvP.
+        Bukkit.getScheduler().runTask(plugin, this::claimFinalListenerPosition);
+        Bukkit.getScheduler().runTaskLater(plugin, this::claimFinalListenerPosition, 40L);
+    }
+
+    private void claimFinalListenerPosition() {
+        if (!plugin.isEnabled()) {
+            return;
+        }
+        HandlerList.unregisterAll(this);
+        Bukkit.getPluginManager().registerEvents(this, plugin);
         enableVanillaDamageHandling();
     }
 
@@ -72,8 +86,9 @@ public final class PvpManager
             return;
         }
 
-        // Final authority for PvP inside MentalHeroes. This fixes the case where
-        // another protection listener already cancelled the hit before us.
+        // MentalHeroes is the final PvP authority in its own world. ON must
+        // explicitly un-cancel hits that a generic lobby/protection listener
+        // cancelled earlier; OFF explicitly cancels them.
         event.setCancelled(!enabled);
     }
 
@@ -136,6 +151,10 @@ public final class PvpManager
         plugin.getConfig().set("pvp.enabled", newState);
         plugin.saveConfig();
         enableVanillaDamageHandling();
+
+        // Also reclaim final listener order whenever the admin toggles PvP.
+        // This covers plugins that were reloaded/re-registered after startup.
+        Bukkit.getScheduler().runTask(plugin, this::claimFinalListenerPosition);
 
         sender.sendMessage(Component.text(
                 newState
