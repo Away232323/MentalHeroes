@@ -57,6 +57,8 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         dimensionManager = new DimensionManager(this);
         trialChamberManager = new TrialChamberManager(this);
         graveManager = new GraveManager(this);
+        GraveDeathCompatibilityListener graveDeathCompatibilityListener =
+                new GraveDeathCompatibilityListener(this);
 
         DisabledMobListener disabledMobListener =
                 new DisabledMobListener(this);
@@ -88,6 +90,10 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 trialChamberManager,
+                this
+        );
+        getServer().getPluginManager().registerEvents(
+                graveDeathCompatibilityListener,
                 this
         );
         getServer().getPluginManager().registerEvents(
