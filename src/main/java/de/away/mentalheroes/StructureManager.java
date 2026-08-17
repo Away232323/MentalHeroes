@@ -30,7 +30,8 @@ final class StructureManager implements CommandExecutor, TabCompleter {
 
     private static final String NETHER_ISLAND_NAME = "NetherInsel";
     private static final String NETHER_ISLAND_FILE = "NetherInsel.schem";
-    private static final String NETHER_ISLAND_RESOURCE = "structures/netherinsel.schem.b64";
+    private static final String NETHER_ISLAND_RESOURCE_PATTERN =
+            "structures/netherinsel-parts/part-%02d.txt";
 
     private final MentalHeroesPlugin plugin;
 
@@ -108,7 +109,7 @@ final class StructureManager implements CommandExecutor, TabCompleter {
         File target = new File(structures, NETHER_ISLAND_FILE);
         File temporary = new File(structures, NETHER_ISLAND_FILE + ".tmp");
 
-        byte[] bundled = readBundledBase64(NETHER_ISLAND_RESOURCE);
+        byte[] bundled = readBundledSchematic();
         if (bundled.length < 4 || (bundled[0] & 0xff) != 0x1f || (bundled[1] & 0xff) != 0x8b) {
             throw new IllegalStateException("Bundled NetherInsel schematic is invalid");
         }
@@ -118,15 +119,22 @@ final class StructureManager implements CommandExecutor, TabCompleter {
         return target;
     }
 
-    private byte[] readBundledBase64(String resource) throws Exception {
-        try (InputStream input = plugin.getResource(resource)) {
+    private byte[] readBundledSchematic() throws Exception {
+        ByteArrayOutputStream encoded = new ByteArrayOutputStream();
+        for (int index = 0; index < 100; index++) {
+            String resource = String.format(NETHER_ISLAND_RESOURCE_PATTERN, index);
+            InputStream input = plugin.getResource(resource);
             if (input == null) {
-                throw new IllegalStateException("Bundled resource is missing: " + resource);
+                break;
             }
-            ByteArrayOutputStream encoded = new ByteArrayOutputStream();
-            input.transferTo(encoded);
-            return Base64.getMimeDecoder().decode(encoded.toByteArray());
+            try (input) {
+                input.transferTo(encoded);
+            }
         }
+        if (encoded.size() == 0) {
+            throw new IllegalStateException("Bundled NetherInsel schematic is missing");
+        }
+        return Base64.getMimeDecoder().decode(encoded.toByteArray());
     }
 
     private void pasteWithWorldEdit(File schematic, World world, int x, int y, int z) throws Exception {
