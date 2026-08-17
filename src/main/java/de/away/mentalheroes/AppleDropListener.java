@@ -19,6 +19,14 @@ public final class AppleDropListener implements Listener {
 
     public AppleDropListener(MentalHeroesPlugin plugin) {
         this.plugin = plugin;
+
+        HeroesGoldenAppleRecipeManager goldenAppleRecipeManager =
+                new HeroesGoldenAppleRecipeManager(plugin);
+        goldenAppleRecipeManager.registerRecipe();
+        plugin.getServer().getPluginManager().registerEvents(
+                goldenAppleRecipeManager,
+                plugin
+        );
     }
 
     @EventHandler(
