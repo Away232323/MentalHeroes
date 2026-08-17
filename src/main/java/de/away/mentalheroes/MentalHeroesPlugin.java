@@ -22,6 +22,7 @@ public final class MentalHeroesPlugin extends JavaPlugin {
     private DimensionManager dimensionManager;
     private TrialChamberManager trialChamberManager;
     private GraveManager graveManager;
+    private HeroesSlimeSpawnManager heroesSlimeSpawnManager;
 
     @Override
     public void onEnable() {
@@ -59,6 +60,7 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         dimensionManager = new DimensionManager(this);
         trialChamberManager = new TrialChamberManager(this);
         graveManager = new GraveManager(this);
+        heroesSlimeSpawnManager = new HeroesSlimeSpawnManager(this);
         GraveDeathCompatibilityListener graveDeathCompatibilityListener =
                 new GraveDeathCompatibilityListener(this);
 
@@ -104,6 +106,10 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 graveManager,
+                this
+        );
+        getServer().getPluginManager().registerEvents(
+                heroesSlimeSpawnManager,
                 this
         );
         getServer().getPluginManager().registerEvents(
@@ -156,6 +162,18 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         command.setExecutor(commandHandler);
         command.setTabCompleter(commandHandler);
 
+        StructureManager structureManager = new StructureManager(this);
+        PluginCommand mentalCommand = getCommand("mental");
+
+        if (mentalCommand == null) {
+            throw new IllegalStateException(
+                    "The mental command is missing from plugin.yml!"
+            );
+        }
+
+        mentalCommand.setExecutor(structureManager);
+        mentalCommand.setTabCompleter(structureManager);
+
         PluginCommand pvpCommand = getCommand("pvp");
 
         if (pvpCommand == null) {
@@ -189,6 +207,7 @@ public final class MentalHeroesPlugin extends JavaPlugin {
         restrictedEnchantmentManager.start();
         dimensionManager.start();
         graveManager.start();
+        heroesSlimeSpawnManager.start();
         trialChamberManager.removeFromLoadedChunks();
         disabledMobListener.removeExistingMobs();
 
@@ -199,6 +218,10 @@ public final class MentalHeroesPlugin extends JavaPlugin {
     public void onDisable() {
         if (graveManager != null) {
             graveManager.stop();
+        }
+
+        if (heroesSlimeSpawnManager != null) {
+            heroesSlimeSpawnManager.stop();
         }
 
         if (combatManager != null) {
