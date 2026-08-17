@@ -3,7 +3,9 @@ version: '${version}'
 main: de.away.mentalheroes.MentalHeroesPlugin
 api-version: '1.21.6'
 author: Away
-description: Hero hearts, combat, graves, and grappling hooks for Paper 1.21.6
+description: Hero hearts, combat, graves, grappling hooks, structures, and custom Heroes spawns for Paper 1.21.6
+softdepend:
+  - WorldEdit
 
 commands:
   mentalheroes:
@@ -11,6 +13,10 @@ commands:
     usage: /mentalheroes <hearts|sethearts|grappler>
     aliases:
       - mh
+
+  mental:
+    description: MentalHEROS admin structure commands
+    usage: /mental place <structure>
 
   pvp:
     description: Enables, disables, or checks global PvP
@@ -35,6 +41,10 @@ permissions:
 
   mentalheroes.command.grappler:
     description: Allows giving grappling hooks by command
+    default: op
+
+  mentalheroes.command.place:
+    description: Allows placing bundled MentalHEROS structures with /mental place
     default: op
 
   mentalheroes.command.pvp:
