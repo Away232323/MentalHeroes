@@ -1,5 +1,6 @@
 package de.away.mentalheroes;
 
+import org.bukkit.GameRule;
 import org.bukkit.HeightMap;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -17,7 +18,8 @@ import org.bukkit.scheduler.BukkitTask;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Gives MentalHEROS surface slimes a biome-independent night spawn.
+ * Gives MentalHEROS surface slimes a biome-independent night spawn and keeps
+ * reduced debug information enabled in the Heroes world only.
  * Other modes/worlds are intentionally untouched.
  */
 final class HeroesSlimeSpawnManager implements Listener {
@@ -37,6 +39,7 @@ final class HeroesSlimeSpawnManager implements Listener {
         if (task != null) {
             return;
         }
+        applyHeroesDebugRule();
         task = plugin.getServer().getScheduler().runTaskTimer(
                 plugin,
                 this::tick,
@@ -65,6 +68,8 @@ final class HeroesSlimeSpawnManager implements Listener {
     }
 
     private void tick() {
+        applyHeroesDebugRule();
+
         for (Player player : plugin.getServer().getOnlinePlayers()) {
             if (!plugin.isHeroesWorld(player)) {
                 continue;
@@ -104,6 +109,18 @@ final class HeroesSlimeSpawnManager implements Listener {
             if (entity instanceof Slime slime) {
                 int roll = ThreadLocalRandom.current().nextInt(10);
                 slime.setSize(roll == 0 ? 4 : roll < 4 ? 2 : 1);
+            }
+        }
+    }
+
+    private void applyHeroesDebugRule() {
+        for (World world : plugin.getServer().getWorlds()) {
+            if (!plugin.isHeroesWorld(world)) {
+                continue;
+            }
+            Boolean current = world.getGameRuleValue(GameRule.REDUCED_DEBUG_INFO);
+            if (!Boolean.TRUE.equals(current)) {
+                world.setGameRule(GameRule.REDUCED_DEBUG_INFO, true);
             }
         }
     }
