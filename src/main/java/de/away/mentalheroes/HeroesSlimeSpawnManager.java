@@ -18,9 +18,9 @@ import org.bukkit.scheduler.BukkitTask;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Gives MentalHEROS surface slimes a biome-independent night spawn and keeps
- * reduced debug information enabled in the Heroes world only.
- * Other modes/worlds are intentionally untouched.
+ * Gives MentalHEROS surface slimes a biome-independent night spawn, keeps
+ * reduced debug information enabled, and runs the MentalHEROS-only Pie-Ray
+ * decoy manager. Other modes/worlds are intentionally untouched.
  */
 final class HeroesSlimeSpawnManager implements Listener {
 
@@ -29,10 +29,13 @@ final class HeroesSlimeSpawnManager implements Listener {
     private static final int MAX_NEARBY_SLIMES = 6;
 
     private final MentalHeroesPlugin plugin;
+    private final FakePieChartManager fakePieChartManager;
     private BukkitTask task;
 
     HeroesSlimeSpawnManager(MentalHeroesPlugin plugin) {
         this.plugin = plugin;
+        this.fakePieChartManager = new FakePieChartManager(plugin);
+        plugin.getServer().getPluginManager().registerEvents(fakePieChartManager, plugin);
     }
 
     void start() {
@@ -40,6 +43,7 @@ final class HeroesSlimeSpawnManager implements Listener {
             return;
         }
         applyHeroesDebugRule();
+        fakePieChartManager.start();
         task = plugin.getServer().getScheduler().runTaskTimer(
                 plugin,
                 this::tick,
@@ -49,6 +53,7 @@ final class HeroesSlimeSpawnManager implements Listener {
     }
 
     void stop() {
+        fakePieChartManager.stop();
         if (task != null) {
             task.cancel();
             task = null;
